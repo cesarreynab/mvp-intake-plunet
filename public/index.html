@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Intake de solicitudes · Plunet · MVP</title>
+  <meta name="description" content="MVP con IA: pega el correo de una solicitud de traducción y recibe el Request de Plunet prellenado, con la cita de cada campo. Datos sintéticos.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/archivo-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <a class="saltar" href="#entrada">Saltar al contenido</a>
+
+  <!-- Íconos (trazo simple, estilo Feather, licencia MIT). Se usan con <svg class="icono"><use href="#i-nombre"/></svg> -->
+  <svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-nube" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+      <symbol id="i-prohibido" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></symbol>
+      <symbol id="i-persona" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+      <symbol id="i-alerta" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+      <symbol id="i-herramienta" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/></symbol>
+      <symbol id="i-paso" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></symbol>
+      <symbol id="i-copiar" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+      <symbol id="i-enviar" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+      <symbol id="i-cerrar" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+      <symbol id="i-pedido" viewBox="0 0 24 24"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></symbol>
+      <symbol id="i-politica" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+      <symbol id="i-reintentar" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+      <symbol id="i-cola" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+      <symbol id="i-candado" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+      <symbol id="i-flecha" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
+      <symbol id="i-codigo" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="cabecera">
+    <div class="marca">
+      <span class="marca-icono" aria-hidden="true"><svg class="icono"><use href="#i-nube"/></svg></span>
+      <div>
+        <h1 id="titulo">Intake de solicitudes · Plunet</h1>
+        <p id="subtitulo" class="subtitulo">Prellena el Request de Plunet BusinessManager desde el correo del cliente · LILT Operaciones (datos sintéticos)</p>
+      </div>
+    </div>
+    <p class="conexion" id="conexion" data-estado="comprobando" role="status">
+      <span class="punto" aria-hidden="true"></span>
+      <span id="conexion-texto">Comprobando conexión…</span>
+    </p>
+  </header>
+
+  <div id="aviso" class="aviso" role="status" hidden></div>
+
+  <main class="contenido">
+    <section class="panel panel-entrada" id="entrada" aria-labelledby="t-entrada">
+      <h2 id="t-entrada" class="panel-titulo">Correo de la solicitud</h2>
+
+      <form id="formulario" novalidate>
+        <div class="ejemplos">
+          <p id="t-ejemplos" class="etiqueta-peq">Prueba con un ejemplo</p>
+          <ul id="lista-ejemplos" class="ejemplos-lista" aria-labelledby="t-ejemplos"></ul>
+        </div>
+
+        <label for="mensaje" class="etiqueta">Pega el correo y el texto de sus adjuntos</label>
+        <textarea id="mensaje" name="mensaje" rows="12" maxlength="6000" spellcheck="false"
+                  placeholder="De: …&#10;Fecha: AAAA-MM-DD hh:mm&#10;Asunto: …&#10;&#10;Cuerpo del correo&#10;&#10;--- Adjunto: archivo.pdf (n páginas) ---&#10;[p.1] Texto de la página"
+                  aria-describedby="ayuda-mensaje error-mensaje"></textarea>
+        <div class="fila-meta">
+          <p id="ayuda-mensaje" class="ayuda">Solo datos sintéticos o anonimizados: el modelo gratuito registra el uso.</p>
+          <p id="contador" class="contador" aria-hidden="true">0 / 6000</p>
+        </div>
+        <p id="error-mensaje" class="error-campo" role="alert" hidden></p>
+
+        <div id="bloque-codigo" class="bloque-codigo" hidden>
+          <label for="codigo" class="etiqueta"><svg class="icono icono-peq" aria-hidden="true"><use href="#i-candado"/></svg> Código de acceso</label>
+          <input id="codigo" name="codigo" type="password" autocomplete="off" spellcheck="false" maxlength="100" aria-describedby="ayuda-codigo">
+          <p id="ayuda-codigo" class="ayuda">Te lo entrega quien dicta el curso. Protege la cuota del modelo gratuito.</p>
+        </div>
+
+        <div class="acciones">
+          <button type="submit" id="enviar" class="boton boton-primario">
+            <svg class="icono" aria-hidden="true"><use href="#i-enviar"/></svg>
+            <span id="enviar-texto">Prellenar Request</span>
+            <kbd class="atajo" aria-hidden="true">Ctrl + Enter</kbd>
+          </button>
+          <button type="button" id="limpiar" class="boton boton-secundario">Limpiar</button>
+        </div>
+        <p class="nota-cuota">Cada correo usa una llamada al modelo. Con el modelo gratuito el cupo es de 50 por día: pruébalo con intención.</p>
+      </form>
+    </section>
+
+    <section class="panel panel-resultado" aria-labelledby="t-resultado">
+      <h2 id="t-resultado" class="panel-titulo">Resultado</h2>
+      <div id="resultado" class="resultado" aria-busy="false"></div>
+    </section>
+  </main>
+  <p id="anuncio" class="solo-lectura" role="status" aria-live="polite"></p>
+
+  <footer class="pie">
+    <details class="como">
+      <summary>¿Cómo está conectada esta pantalla?</summary>
+      <div class="como-cuerpo">
+        <ol class="flujo" aria-label="Recorrido de una solicitud">
+          <li><strong>Navegador</strong><span>esta página</span></li>
+          <li class="flujo-flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"/></svg></li>
+          <li><strong>Vercel</strong><span>/api/intake</span></li>
+          <li class="flujo-flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"/></svg></li>
+          <li><strong>Workflow</strong><span>extraer · validar · derivar</span></li>
+          <li class="flujo-flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"/></svg></li>
+          <li><strong>Modelo</strong><span>OpenRouter</span></li>
+        </ol>
+        <p>Esta página es solo la interfaz. Al pulsar «Prellenar Request», el navegador llama a <code>/api/intake</code> en el mismo sitio. Esa función valida el correo y ejecuta un workflow fijo: una llamada al modelo propone cada campo con su cita, y el código descarta las citas que no aparecen en el correo, identifica al cliente por el dominio, aplica los umbrales y decide el estado. Nada se escribe en Plunet: el PM revisa y crea el Request. Ninguna clave llega al navegador.</p>
+      </div>
+    </details>
+    <p class="pie-nota">Proyecto Final AI · BSG Institute · César Reyna. Datos sintéticos. Un modelo de IA puede equivocarse: el PM revisa cada campo contra su cita antes de crear el Request.</p>
+  </footer>
+
+  <noscript><p class="sin-js">Esta interfaz necesita JavaScript para funcionar.</p></noscript>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
