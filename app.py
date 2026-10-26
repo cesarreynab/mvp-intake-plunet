@@ -5,6 +5,7 @@ Adaptado del proxy del Kit MVP (alternativa LangChain). El backend es el workflo
 Rutas:
   GET  /api/bandeja          la bandeja simulada de projects@lilt.com y la tabla de clientes
   POST /api/intake           prellena el Request de un correo de la bandeja (message_id) o de uno pegado (mensaje)
+  POST /api/estimacion       recalcula volumen y plazo mientras el PM edita el borrador (sin modelo)
   POST /api/plunet/requests  el PM confirma el borrador y se crea el Request en el Plunet sandbox
 
 Cada vez que el PM pulsa «Prellenar Request», /api/intake hace, en orden:
@@ -35,6 +36,7 @@ from fastapi.responses import JSONResponse
 
 from contrato import VERSION, ErrorContrato, normalizar_salida, respuesta_error, validar_entrada
 from datos import BANDEJA, BANDEJA_POR_ID, BUZON, CLIENTES, texto_correo
+from estimacion import estimar_borrador
 from plunet import crear_request
 
 # ----------------------------------------------------------------------------- EDITA AQUÍ
@@ -140,7 +142,7 @@ def configurado() -> bool:
     return bool(os.getenv("OPENROUTER_API_KEY", "").strip())
 
 
-async def llamar_backend(mensaje: str) -> Any:
+async def llamar_backend(mensaje: str, adjuntos: list | None = None) -> Any:
     if not configurado():
         raise ErrorContrato("sin_configurar", "Falta la variable de entorno OPENROUTER_API_KEY en Vercel.", 503,
                             "define OPENROUTER_API_KEY y vuelve a desplegar")
@@ -151,7 +153,7 @@ async def llamar_backend(mensaje: str) -> Any:
         raise ErrorContrato("backend", "No se pudo cargar el workflow: falta una librería o un archivo del proyecto.", 500,
                             f"{type(e).__name__}: {str(e)[:100]}") from None
     try:
-        return await asyncio.wait_for(ejecutar_intake(mensaje), timeout=TIMEOUT_S)
+        return await asyncio.wait_for(ejecutar_intake(mensaje, adjuntos), timeout=TIMEOUT_S)
     except asyncio.TimeoutError:
         raise ErrorContrato("timeout", "El workflow tardó demasiado en responder.", 504, f"sin respuesta en {int(TIMEOUT_S)} s", True) from None
 
@@ -181,12 +183,13 @@ async def intake(request: Request) -> JSONResponse:
         revisar_acceso(request)
         limitar(ip_de(request))
         mensaje, message_id = validar_entrada(await leer_json(request))
+        adjuntos = None
         if message_id:
             correo = BANDEJA_POR_ID.get(message_id)
             if correo is None:
                 raise ErrorContrato("validacion", "Ese correo no está en la bandeja.", 404, "message_id desconocido")
-            mensaje = texto_correo(correo)
-        crudo = await llamar_backend(mensaje)
+            mensaje, adjuntos = texto_correo(correo), correo["adjuntos"]
+        crudo = await llamar_backend(mensaje, adjuntos)
         resultado = normalizar_salida(crudo, backend=BACKEND, ruta=RUTA, message_id=message_id)
         resultado["meta"]["latencia_ms"] = milisegundos(inicio)
         resultado["meta"]["id"] = id_solicitud
@@ -199,6 +202,21 @@ async def intake(request: Request) -> JSONResponse:
     except Exception as e:  # noqa: BLE001  nunca se le devuelve al navegador un traceback
         registrar(id=id_solicitud, backend=BACKEND, ok=False, codigo="backend", error=type(e).__name__, ms=milisegundos(inicio))
         error = ErrorContrato("backend", "Error inesperado en la función de Vercel.", 500, type(e).__name__)
+        return responder(respuesta_error(error, id_solicitud, BACKEND), 500)
+
+
+@app.post("/api/estimacion")
+async def estimacion(request: Request) -> JSONResponse:
+    """Recalcula volumen y plazo mientras el PM edita servicio, idiomas o fecha. No usa el modelo."""
+    id_solicitud = uuid.uuid4().hex[:8]
+    try:
+        revisar_acceso(request)
+        return responder(estimar_borrador(await leer_json(request)))
+    except ErrorContrato as e:
+        return responder(respuesta_error(e, id_solicitud, BACKEND), e.status)
+    except Exception as e:  # noqa: BLE001
+        registrar(id=id_solicitud, accion="estimacion", ok=False, error=type(e).__name__)
+        error = ErrorContrato("backend", "Error inesperado al estimar.", 500, type(e).__name__)
         return responder(respuesta_error(error, id_solicitud, BACKEND), 500)
 
 

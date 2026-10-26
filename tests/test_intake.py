@@ -30,7 +30,7 @@ def test_p1_camino_feliz(modelo_simulado):
     assert r["request_plunet"]["targetLanguage (por item)"] == ["es-MX", "pt-BR"]
     assert r["escrituras_plunet"] == 0
     assert r["archivos"] == [{"nombre": "ICF_PX4471_EN.pdf", "detalle": "14 páginas, PDF nativo"}]
-    assert [p["nombre"] for p in r["pasos"]] == ["extraer", "validar", "derivar"]
+    assert [p["nombre"] for p in r["pasos"]] == ["extraer", "validar", "derivar", "estimar"]
     assert r["llamadas_modelo"] == 1
 
 

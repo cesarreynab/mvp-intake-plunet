@@ -15,6 +15,7 @@ from typing import Any
 
 from contrato import SERVICIOS, TIPOS_DOCUMENTO, ErrorContrato, limpiar_texto
 from datos import BANDEJA_POR_ID, CLIENTES, IDIOMAS_ISO
+from estimacion import estimar_borrador
 
 _CLIENTES = {c["cliente_id"]: c for c in CLIENTES}
 _LOCALE = re.compile(r"^([a-z]{2})(?:[-_]([a-z]{2}))?$")
@@ -72,6 +73,12 @@ def crear_request(cuerpo: Any) -> dict:
 
     message_id = str(cuerpo.get("message_id") or "")
     correo = BANDEJA_POR_ID.get(message_id) if _MESSAGE_ID.match(message_id) else None
+    try:   # volumen y plazo con lo que confirmó el PM; un correo pegado sin adjuntos no tiene palabras que contar
+        calculo = estimar_borrador({"message_id": message_id if correo else None, "palabras": cuerpo.get("palabras"),
+                                    "paginas": cuerpo.get("paginas"), "fecha_correo": cuerpo.get("fecha_correo"),
+                                    "targetLanguage": destinos, "service": servicio, "deliveryDeadline": entrega.isoformat()})
+    except ErrorContrato:
+        calculo = {"volumen": None, "estimacion": None}
     ahora = datetime.now(timezone.utc)
     return {
         "ok": True,
@@ -89,6 +96,8 @@ def crear_request(cuerpo: Any) -> dict:
             "subject": tipo,
             "deliveryDeadline": entrega.isoformat(),
             "briefDescription": limpiar_texto(r.get("briefDescription"), 300) or None,
+            "wordCount": calculo["volumen"]["palabras"] if calculo["volumen"] else None,
         },
+        "estimacion": calculo["estimacion"],
         "nota": "Plunet sandbox: el Request no se escribió en un Plunet real.",
     }

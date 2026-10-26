@@ -32,8 +32,8 @@ def test_p1_respeta_el_contrato(cliente):
     assert r.status_code == 200
     d = r.json()
     assert d["ok"] is True and d["estado"] == "pendiente_revision"
-    assert set(d) == {"ok", "message_id", "estado", "razon", "alerta", "score_global", "campos", "confianza_por_campo",
-                      "campos_baja_confianza", "evidencia", "archivos", "request_plunet", "escrituras_plunet",
+    assert set(d) == {"ok", "message_id", "fecha_correo", "estado", "razon", "alerta", "score_global", "campos", "confianza_por_campo",
+                      "campos_baja_confianza", "evidencia", "archivos", "volumen", "estimacion", "request_plunet", "escrituras_plunet",
                       "pasos", "meta"}
     assert d["escrituras_plunet"] == 0
     assert d["meta"]["version"] == "1.0-plunet" and d["meta"]["ruta"] == "B"
@@ -69,7 +69,7 @@ def test_limite_por_minuto(cliente, monkeypatch):
 
 
 def test_salida_invalida_del_backend(cliente, monkeypatch):
-    async def roto(_):
+    async def roto(*_):
         return {"estado": "aprobado_y_cargado"}
     monkeypatch.setattr(intake, "ejecutar_intake", roto)
     r = cliente.post("/api/intake", json={"mensaje": P1})
@@ -79,15 +79,15 @@ def test_salida_invalida_del_backend(cliente, monkeypatch):
 def test_el_contrato_nunca_reporta_escrituras(cliente, monkeypatch):
     original = intake.ejecutar_intake
 
-    async def mentiroso(m):
-        r = await original(m)
+    async def mentiroso(*args):
+        r = await original(*args)
         return {**r, "escrituras_plunet": 5}
     monkeypatch.setattr(intake, "ejecutar_intake", mentiroso)
     assert cliente.post("/api/intake", json={"mensaje": P1}).json()["escrituras_plunet"] == 0
 
 
 def test_error_no_expone_traceback(cliente, monkeypatch):
-    async def explota(_):
+    async def explota(*_):
         raise RuntimeError("detalle interno con sk-or-secreto")
     monkeypatch.setattr(intake, "ejecutar_intake", explota)
     r = cliente.post("/api/intake", json={"mensaje": P1})

@@ -26,7 +26,8 @@ SERVICIOS = ("traduccion", "traduccion_back_translation", "revision", "dtp")
 CAMPOS = ("cliente_id", "cliente_nombre", "contrato_id", "idioma_origen", "idiomas_destino", "tipo_documento",
           "servicio", "deadline_solicitado", "notas_cliente")
 CAMPOS_PLUNET = ("customerID", "sourceLanguage", "targetLanguage (por item)", "deliveryDeadline", "service (por item)",
-                 "subject", "briefDescription", "estado")
+                 "subject", "briefDescription", "wordCount", "estado")
+SEMAFOROS = ("alcanza", "ajustado", "no_alcanza", "sin_fecha")
 
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -155,11 +156,41 @@ def _request(crudo: Any) -> dict | None:
     salida = {}
     for k in CAMPOS_PLUNET:
         v = crudo.get(k)
-        if isinstance(v, list):
+        if k == "wordCount":
+            salida[k] = _entero(v)
+        elif isinstance(v, list):
             salida[k] = [limpiar_texto(x, 20) for x in v if isinstance(x, str)][:20]
         else:
             salida[k] = limpiar_texto(v, 300) or None
     return salida
+
+
+def normalizar_volumen(crudo: Any) -> dict | None:
+    if not isinstance(crudo, dict) or _entero(crudo.get("palabras")) is None:
+        return None
+    archivos = [{"nombre": limpiar_texto(a.get("nombre"), 160), "palabras": _entero(a.get("palabras")) or 0,
+                 "paginas": _entero(a.get("paginas")), "fuente": limpiar_texto(a.get("fuente"), 120)}
+                for a in (crudo.get("archivos") or [])[:20] if isinstance(a, dict)]
+    return {"palabras": _entero(crudo["palabras"]), "paginas": _entero(crudo.get("paginas")), "archivos": archivos,
+            "nota": limpiar_texto(crudo.get("nota"), 200)}
+
+
+def normalizar_estimacion(crudo: Any) -> dict | None:
+    if not isinstance(crudo, dict) or _entero(crudo.get("dias_habiles")) is None:
+        return None
+    entrega = crudo.get("entrega_estimada")
+    return {
+        "servicio": crudo.get("servicio") if crudo.get("servicio") in SERVICIOS else None,
+        "idiomas": _entero(crudo.get("idiomas")),
+        "dias_habiles": _entero(crudo["dias_habiles"]),
+        "esfuerzo_dias_persona": _entero(crudo.get("esfuerzo_dias_persona")),
+        "pasos": [limpiar_texto(p, 160) for p in (crudo.get("pasos") or [])[:6] if isinstance(p, str)],
+        "supuesto": limpiar_texto(crudo.get("supuesto"), 200),
+        "entrega_estimada": entrega if isinstance(entrega, str) and _FECHA.match(entrega) else None,
+        "plazo_cliente_dias_habiles": _entero(crudo.get("plazo_cliente_dias_habiles")),
+        "holgura_dias": _entero(crudo.get("holgura_dias")),
+        "semaforo": crudo.get("semaforo") if crudo.get("semaforo") in SEMAFOROS else "sin_fecha",
+    }
 
 
 def _pasos(crudo: Any) -> list[dict]:
@@ -190,6 +221,7 @@ def normalizar_salida(crudo: Any, *, backend: str, ruta: str = "", modelo: str =
     return {
         "ok": True,
         "message_id": message_id if message_id and _MESSAGE_ID.match(message_id) else None,
+        "fecha_correo": crudo.get("fecha_correo") if isinstance(crudo.get("fecha_correo"), str) and _FECHA.match(crudo["fecha_correo"]) else None,
         "estado": estado,
         "razon": limpiar_texto(crudo.get("razon"), 300),
         "alerta": limpiar_texto(crudo.get("alerta"), 300),
@@ -199,6 +231,8 @@ def normalizar_salida(crudo: Any, *, backend: str, ruta: str = "", modelo: str =
         "campos_baja_confianza": _lista_campos(crudo.get("campos_baja_confianza")),
         "evidencia": _evidencia(crudo.get("evidencia")),
         "archivos": _archivos(crudo.get("archivos")),
+        "volumen": normalizar_volumen(crudo.get("volumen")),
+        "estimacion": normalizar_estimacion(crudo.get("estimacion")) if estado == "pendiente_revision" else None,
         "request_plunet": request,
         "escrituras_plunet": 0,   # el MVP nunca escribe en Plunet, diga lo que diga el backend
         "pasos": _pasos(crudo.get("pasos")),

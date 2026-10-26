@@ -34,6 +34,12 @@ window.MESA_CONFIG = {
         detalle: "No es una solicitud nueva de traducción (cambio de proyecto, precio, facturación u otro tema).",
       },
     },
+    semaforos: {
+      alcanza: "Alcanza",
+      ajustado: "Ajustado",
+      no_alcanza: "No alcanza",
+      sin_fecha: "Sin fecha pedida",
+    },
     estadosCortos: {
       pendiente_revision: "Por revisar",
       cola_manual: "Cola manual",
@@ -83,6 +89,7 @@ window.MESA_CONFIG = {
     "msg-20261026-1310-phx": {
       "ok": true,
       "message_id": "msg-20261026-1310-phx",
+      "fecha_correo": "2026-10-26",
       "estado": "fuera_de_alcance",
       "razon": "Pide reenviar una factura; no es una solicitud de traducción.",
       "alerta": "",
@@ -125,6 +132,8 @@ window.MESA_CONFIG = {
         }
       ],
       "archivos": [],
+      "volumen": null,
+      "estimacion": null,
       "request_plunet": null,
       "escrituras_plunet": 0,
       "pasos": [
@@ -142,6 +151,11 @@ window.MESA_CONFIG = {
           "tipo": "paso",
           "nombre": "derivar",
           "detalle": "regla → fuera_de_alcance (score 0.16)"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "estimar",
+          "detalle": "sin adjuntos: no hay palabras que contar"
         }
       ],
       "meta": {
@@ -157,6 +171,7 @@ window.MESA_CONFIG = {
     "msg-20261026-1230-nfc": {
       "ok": true,
       "message_id": "msg-20261026-1230-nfc",
+      "fecha_correo": "2026-10-26",
       "estado": "cola_manual",
       "razon": "score_global 0.43 < 0.6: no se prellena",
       "alerta": "",
@@ -213,6 +228,20 @@ window.MESA_CONFIG = {
           "detalle": "12 diapositivas"
         }
       ],
+      "volumen": {
+        "palabras": 420,
+        "paginas": 12,
+        "archivos": [
+          {
+            "nombre": "kickoff_deck.pptx",
+            "palabras": 420,
+            "paginas": 12,
+            "fuente": "conteo del extractor sobre el archivo completo"
+          }
+        ],
+        "nota": "Conteo preliminar sobre el texto extraído. El análisis oficial (repeticiones y coincidencias) es el de memoQ."
+      },
+      "estimacion": null,
       "request_plunet": null,
       "escrituras_plunet": 0,
       "pasos": [
@@ -230,6 +259,11 @@ window.MESA_CONFIG = {
           "tipo": "paso",
           "nombre": "derivar",
           "detalle": "regla → cola_manual (score 0.43)"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "estimar",
+          "detalle": "420 palabras · plazo: faltan servicio o idiomas"
         }
       ],
       "meta": {
@@ -245,6 +279,7 @@ window.MESA_CONFIG = {
     "msg-20261026-1102-bms": {
       "ok": true,
       "message_id": "msg-20261026-1102-bms",
+      "fecha_correo": "2026-10-26",
       "estado": "pendiente_revision",
       "razon": "score_global 0.8; revisar: deadline_solicitado",
       "alerta": "",
@@ -313,6 +348,34 @@ window.MESA_CONFIG = {
           "detalle": "9 páginas, PDF nativo"
         }
       ],
+      "volumen": {
+        "palabras": 2870,
+        "paginas": 9,
+        "archivos": [
+          {
+            "nombre": "ICF_BMS-118_ES.pdf",
+            "palabras": 2870,
+            "paginas": 9,
+            "fuente": "conteo del extractor sobre el archivo completo"
+          }
+        ],
+        "nota": "Conteo preliminar sobre el texto extraído. El análisis oficial (repeticiones y coincidencias) es el de memoQ."
+      },
+      "estimacion": {
+        "servicio": "traduccion",
+        "idiomas": 2,
+        "dias_habiles": 3,
+        "esfuerzo_dias_persona": 6,
+        "pasos": [
+          "Traducción: 2.870 palabras ÷ 2.500 por día = 2 días",
+          "Revisión bilingüe y QA: 1 día"
+        ],
+        "supuesto": "Traducción a 2.500 palabras por día por lingüista, más 1 día de revisión y QA.",
+        "entrega_estimada": "2026-10-29",
+        "plazo_cliente_dias_habiles": null,
+        "holgura_dias": null,
+        "semaforo": "sin_fecha"
+      },
       "request_plunet": {
         "customerID": "BMS-0032",
         "sourceLanguage": "es",
@@ -324,6 +387,7 @@ window.MESA_CONFIG = {
         "service (por item)": "traduccion",
         "subject": "consentimiento_informado",
         "briefDescription": "No hay apuro, para cuando puedan.",
+        "wordCount": 2870,
         "estado": "borrador_pendiente_confirmacion_PM"
       },
       "escrituras_plunet": 0,
@@ -342,6 +406,11 @@ window.MESA_CONFIG = {
           "tipo": "paso",
           "nombre": "derivar",
           "detalle": "regla → pendiente_revision (score 0.8)"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "estimar",
+          "detalle": "2.870 palabras · 3 días hábiles · sin fecha"
         }
       ],
       "meta": {
@@ -357,6 +426,7 @@ window.MESA_CONFIG = {
     "msg-20261026-1015-mdl": {
       "ok": true,
       "message_id": "msg-20261026-1015-mdl",
+      "fecha_correo": "2026-10-26",
       "estado": "pendiente_revision",
       "razon": "score_global 0.95; revisar: ninguno",
       "alerta": "",
@@ -422,6 +492,33 @@ window.MESA_CONFIG = {
           "detalle": "1 hoja, 120 filas"
         }
       ],
+      "volumen": {
+        "palabras": 960,
+        "paginas": null,
+        "archivos": [
+          {
+            "nombre": "etiquetas_lote7_ES-PT.xlsx",
+            "palabras": 960,
+            "paginas": null,
+            "fuente": "conteo del extractor sobre el archivo completo"
+          }
+        ],
+        "nota": "Conteo preliminar sobre el texto extraído. El análisis oficial (repeticiones y coincidencias) es el de memoQ."
+      },
+      "estimacion": {
+        "servicio": "revision",
+        "idiomas": 1,
+        "dias_habiles": 1,
+        "esfuerzo_dias_persona": 1,
+        "pasos": [
+          "Revisión: 960 palabras ÷ 6.000 por día = 1 día"
+        ],
+        "supuesto": "Revisión a 6.000 palabras por día por revisor.",
+        "entrega_estimada": "2026-10-27",
+        "plazo_cliente_dias_habiles": 4,
+        "holgura_dias": 3,
+        "semaforo": "alcanza"
+      },
       "request_plunet": {
         "customerID": "MDL-0310",
         "sourceLanguage": "es",
@@ -432,6 +529,7 @@ window.MESA_CONFIG = {
         "service (por item)": "revision",
         "subject": "etiquetado",
         "briefDescription": null,
+        "wordCount": 960,
         "estado": "borrador_pendiente_confirmacion_PM"
       },
       "escrituras_plunet": 0,
@@ -450,6 +548,11 @@ window.MESA_CONFIG = {
           "tipo": "paso",
           "nombre": "derivar",
           "detalle": "regla → pendiente_revision (score 0.95)"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "estimar",
+          "detalle": "960 palabras · 1 días hábiles · alcanza"
         }
       ],
       "meta": {
@@ -465,6 +568,7 @@ window.MESA_CONFIG = {
     "msg-20261026-0847-clv": {
       "ok": true,
       "message_id": "msg-20261026-0847-clv",
+      "fecha_correo": "2026-10-26",
       "estado": "pendiente_revision",
       "razon": "score_global 0.95; revisar: contrato_id",
       "alerta": "",
@@ -539,6 +643,34 @@ window.MESA_CONFIG = {
           "detalle": "48 páginas, DOCX"
         }
       ],
+      "volumen": {
+        "palabras": 14350,
+        "paginas": 48,
+        "archivos": [
+          {
+            "nombre": "CV-2210_Protocol_v3.0.docx",
+            "palabras": 14350,
+            "paginas": 48,
+            "fuente": "conteo del extractor sobre el archivo completo"
+          }
+        ],
+        "nota": "Conteo preliminar sobre el texto extraído. El análisis oficial (repeticiones y coincidencias) es el de memoQ."
+      },
+      "estimacion": {
+        "servicio": "traduccion",
+        "idiomas": 2,
+        "dias_habiles": 7,
+        "esfuerzo_dias_persona": 14,
+        "pasos": [
+          "Traducción: 14.350 palabras ÷ 2.500 por día = 6 días",
+          "Revisión bilingüe y QA: 1 día"
+        ],
+        "supuesto": "Traducción a 2.500 palabras por día por lingüista, más 1 día de revisión y QA.",
+        "entrega_estimada": "2026-11-04",
+        "plazo_cliente_dias_habiles": 14,
+        "holgura_dias": 7,
+        "semaforo": "alcanza"
+      },
       "request_plunet": {
         "customerID": "CLV-0091",
         "sourceLanguage": "en",
@@ -550,6 +682,7 @@ window.MESA_CONFIG = {
         "service (por item)": "traduccion",
         "subject": "protocolo",
         "briefDescription": "Mantener la numeración de secciones.",
+        "wordCount": 14350,
         "estado": "borrador_pendiente_confirmacion_PM"
       },
       "escrituras_plunet": 0,
@@ -568,6 +701,11 @@ window.MESA_CONFIG = {
           "tipo": "paso",
           "nombre": "derivar",
           "detalle": "regla → pendiente_revision (score 0.95)"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "estimar",
+          "detalle": "14.350 palabras · 7 días hábiles · alcanza"
         }
       ],
       "meta": {
@@ -583,6 +721,7 @@ window.MESA_CONFIG = {
     "msg-20260918-0830-gml": {
       "ok": true,
       "message_id": "msg-20260918-0830-gml",
+      "fecha_correo": "2026-09-18",
       "estado": "pendiente_revision",
       "razon": "score_global 0.79; revisar: cliente_id, contrato_id",
       "alerta": "Posible cliente MedLabel Andina (MDL-0310) solo por razón social; el remitente es de dominio público. El PM debe confirmarlo.",
@@ -658,6 +797,34 @@ window.MESA_CONFIG = {
           "detalle": "1 página"
         }
       ],
+      "volumen": {
+        "palabras": 62,
+        "paginas": 1,
+        "archivos": [
+          {
+            "nombre": "etiqueta_MLA-22.docx",
+            "palabras": 62,
+            "paginas": 1,
+            "fuente": "conteo del extractor sobre el archivo completo"
+          }
+        ],
+        "nota": "Conteo preliminar sobre el texto extraído. El análisis oficial (repeticiones y coincidencias) es el de memoQ."
+      },
+      "estimacion": {
+        "servicio": "traduccion",
+        "idiomas": 1,
+        "dias_habiles": 2,
+        "esfuerzo_dias_persona": 2,
+        "pasos": [
+          "Traducción: 62 palabras ÷ 2.500 por día = 1 día",
+          "Revisión bilingüe y QA: 1 día"
+        ],
+        "supuesto": "Traducción a 2.500 palabras por día por lingüista, más 1 día de revisión y QA.",
+        "entrega_estimada": "2026-09-22",
+        "plazo_cliente_dias_habiles": 8,
+        "holgura_dias": 6,
+        "semaforo": "alcanza"
+      },
       "request_plunet": {
         "customerID": null,
         "sourceLanguage": "es",
@@ -668,6 +835,7 @@ window.MESA_CONFIG = {
         "service (por item)": "traduccion",
         "subject": "etiquetado",
         "briefDescription": null,
+        "wordCount": 62,
         "estado": "borrador_pendiente_confirmacion_PM"
       },
       "escrituras_plunet": 0,
@@ -686,6 +854,11 @@ window.MESA_CONFIG = {
           "tipo": "paso",
           "nombre": "derivar",
           "detalle": "regla → pendiente_revision (score 0.79)"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "estimar",
+          "detalle": "62 palabras · 2 días hábiles · alcanza"
         }
       ],
       "meta": {
@@ -701,6 +874,7 @@ window.MESA_CONFIG = {
     "msg-20260917-1105-ntr": {
       "ok": true,
       "message_id": "msg-20260917-1105-ntr",
+      "fecha_correo": "2026-09-17",
       "estado": "fuera_de_alcance",
       "razon": "Pide modificar el proyecto existente P-2026-0871 y un precio; no es una solicitud nueva.",
       "alerta": "",
@@ -748,6 +922,8 @@ window.MESA_CONFIG = {
         }
       ],
       "archivos": [],
+      "volumen": null,
+      "estimacion": null,
       "request_plunet": null,
       "escrituras_plunet": 0,
       "pasos": [
@@ -765,6 +941,11 @@ window.MESA_CONFIG = {
           "tipo": "paso",
           "nombre": "derivar",
           "detalle": "regla → fuera_de_alcance (score 0.16)"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "estimar",
+          "detalle": "sin adjuntos: no hay palabras que contar"
         }
       ],
       "meta": {
@@ -780,6 +961,7 @@ window.MESA_CONFIG = {
     "msg-20260916-1540-bms": {
       "ok": true,
       "message_id": "msg-20260916-1540-bms",
+      "fecha_correo": "2026-09-16",
       "estado": "pendiente_revision",
       "razon": "score_global 0.64; revisar: idiomas_destino, deadline_solicitado",
       "alerta": "",
@@ -840,6 +1022,20 @@ window.MESA_CONFIG = {
           "detalle": "6 páginas, escaneado, texto obtenido por OCR"
         }
       ],
+      "volumen": {
+        "palabras": 1640,
+        "paginas": 6,
+        "archivos": [
+          {
+            "nombre": "folleto_paciente_scan.pdf",
+            "palabras": 1640,
+            "paginas": 6,
+            "fuente": "conteo del extractor sobre el archivo completo"
+          }
+        ],
+        "nota": "Conteo preliminar sobre el texto extraído. El análisis oficial (repeticiones y coincidencias) es el de memoQ."
+      },
+      "estimacion": null,
       "request_plunet": {
         "customerID": "BMS-0032",
         "sourceLanguage": "en",
@@ -848,6 +1044,7 @@ window.MESA_CONFIG = {
         "service (por item)": "traduccion",
         "subject": "material_paciente",
         "briefDescription": "a los idiomas de siempre",
+        "wordCount": 1640,
         "estado": "borrador_pendiente_confirmacion_PM"
       },
       "escrituras_plunet": 0,
@@ -866,6 +1063,11 @@ window.MESA_CONFIG = {
           "tipo": "paso",
           "nombre": "derivar",
           "detalle": "regla → pendiente_revision (score 0.64)"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "estimar",
+          "detalle": "1.640 palabras · plazo: faltan servicio o idiomas"
         }
       ],
       "meta": {
@@ -881,6 +1083,7 @@ window.MESA_CONFIG = {
     "msg-20260915-0912-phx": {
       "ok": true,
       "message_id": "msg-20260915-0912-phx",
+      "fecha_correo": "2026-09-15",
       "estado": "pendiente_revision",
       "razon": "score_global 0.95; revisar: contrato_id",
       "alerta": "",
@@ -962,6 +1165,35 @@ window.MESA_CONFIG = {
           "detalle": "14 páginas, PDF nativo"
         }
       ],
+      "volumen": {
+        "palabras": 4820,
+        "paginas": 14,
+        "archivos": [
+          {
+            "nombre": "ICF_PX4471_EN.pdf",
+            "palabras": 4820,
+            "paginas": 14,
+            "fuente": "conteo del extractor sobre el archivo completo"
+          }
+        ],
+        "nota": "Conteo preliminar sobre el texto extraído. El análisis oficial (repeticiones y coincidencias) es el de memoQ."
+      },
+      "estimacion": {
+        "servicio": "traduccion_back_translation",
+        "idiomas": 2,
+        "dias_habiles": 5,
+        "esfuerzo_dias_persona": 10,
+        "pasos": [
+          "Traducción: 4.820 palabras ÷ 2.500 por día = 2 días",
+          "Back-translation: 4.820 palabras ÷ 2.500 por día = 2 días",
+          "Conciliación y QA: 1 día"
+        ],
+        "supuesto": "Traducción y back-translation a 2.500 palabras por día cada una, más 1 día de conciliación y QA.",
+        "entrega_estimada": "2026-09-22",
+        "plazo_cliente_dias_habiles": 5,
+        "holgura_dias": 0,
+        "semaforo": "ajustado"
+      },
       "request_plunet": {
         "customerID": "PHX-0148",
         "sourceLanguage": "en",
@@ -973,6 +1205,7 @@ window.MESA_CONFIG = {
         "service (por item)": "traduccion_back_translation",
         "subject": "consentimiento_informado",
         "briefDescription": "Por favor mantener el formato del sponsor.",
+        "wordCount": 4820,
         "estado": "borrador_pendiente_confirmacion_PM"
       },
       "escrituras_plunet": 0,
@@ -991,6 +1224,11 @@ window.MESA_CONFIG = {
           "tipo": "paso",
           "nombre": "derivar",
           "detalle": "regla → pendiente_revision (score 0.95)"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "estimar",
+          "detalle": "4.820 palabras · 5 días hábiles · ajustado"
         }
       ],
       "meta": {

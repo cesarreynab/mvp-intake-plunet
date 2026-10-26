@@ -1,11 +1,12 @@
 """Workflow de intake para Plunet con LangGraph (ruta B del curso: workflow, no agente).
 
-Tres nodos en un único orden, siempre los mismos:
+Cuatro nodos en un único orden, siempre los mismos:
 
     extraer   una sola llamada al modelo con salida estructurada (SolicitudTraduccion de datos.py)
     validar   código: solo cuentan las citas que existen literalmente en la entrada, umbrales, ISO y locale,
               fechas, cliente por dominio y contrato
     derivar   código: estado pendiente_revision / cola_manual / fuera_de_alcance y borrador del Request
+    estimar   código: conteo preliminar de palabras y plazo estimado contra la fecha pedida (estimacion.py)
 
 El modelo no elige pasos ni tiene herramientas: propone valores con su cita y el código decide. Nada se escribe en
 Plunet: el PM revisa el borrador y es quien crea el Request.
@@ -25,6 +26,7 @@ import openai
 from langgraph.graph import END, START, StateGraph
 
 from contrato import ErrorContrato
+from estimacion import estimar, fecha, volumen_de_adjuntos, volumen_de_texto
 from datos import (CAMPOS_CLAVE, CLIENTES, CLIENTES_POR_DOMINIO, CONFIANZA_DOMINIO, CONFIANZA_RAZON_SOCIAL,
                    DOMINIOS_PUBLICOS, IDIOMAS_ISO, MAPEO_PLUNET, MODEL_ID, SYSTEM_PROMPT, UMBRAL_CAMPO,
                    UMBRAL_GLOBAL, SolicitudTraduccion)
@@ -55,6 +57,9 @@ class Estado(TypedDict, total=False):
     escrituras_plunet: int
     pasos: list
     llamadas: int
+    adjuntos_meta: Optional[list]   # adjuntos de la bandeja con su conteo de palabras; None si el correo se pegó
+    volumen: Optional[dict]
+    estimacion: Optional[dict]
 
 
 # ----------------------------------------------------------------------------- utilidades
@@ -228,15 +233,39 @@ def derivar(r: Estado) -> dict:
     return {**base, "estado": estado, "razon": razon, "pasos": r.get("pasos", []) + [paso]}
 
 
+def estimar_volumen_y_plazo(r: Estado) -> dict:
+    """Conteo preliminar de palabras y plazo estimado (estimacion.py). Sin modelo."""
+    volumen = (volumen_de_adjuntos(r["adjuntos_meta"]) if r.get("adjuntos_meta") is not None
+               else volumen_de_texto(r["entrada"]))
+    campos = r["campos"]
+    plazo = None
+    if r["estado"] == "pendiente_revision":
+        plazo = estimar(volumen, campos.get("servicio"), len(campos.get("idiomas_destino") or []),
+                        fecha(_cabecera(r["entrada"], "Fecha")), fecha(campos.get("deadline_solicitado")))
+    request = r.get("request_plunet")
+    if request is not None:
+        request = {**request, "wordCount": volumen["palabras"] if volumen else None}
+    if not volumen:
+        detalle = "sin adjuntos: no hay palabras que contar"
+    else:
+        detalle = f"{volumen['palabras']:,} palabras".replace(",", ".")
+        detalle += (f" · {plazo['dias_habiles']} días hábiles · {plazo['semaforo'].replace('_', ' ')}" if plazo
+                    else " · plazo: faltan servicio o idiomas")
+    paso = {"tipo": "paso", "nombre": "estimar", "detalle": detalle}
+    return {"volumen": volumen, "estimacion": plazo, "request_plunet": request, "pasos": r.get("pasos", []) + [paso]}
+
+
 def construir_workflow():
     grafo = StateGraph(Estado)
     grafo.add_node("extraer", extraer)
     grafo.add_node("validar", validar)
     grafo.add_node("derivar", derivar)
+    grafo.add_node("estimar", estimar_volumen_y_plazo)
     grafo.add_edge(START, "extraer")
     grafo.add_edge("extraer", "validar")
     grafo.add_edge("validar", "derivar")
-    grafo.add_edge("derivar", END)
+    grafo.add_edge("derivar", "estimar")
+    grafo.add_edge("estimar", END)
     return grafo.compile()
 
 
@@ -248,11 +277,11 @@ def _es_503(e: Exception) -> bool:
     return (isinstance(e, openai.APIStatusError) and e.status_code == 503) or "503" in str(e)
 
 
-async def ejecutar_intake(mensaje: str) -> dict[str, Any]:
+async def ejecutar_intake(mensaje: str, adjuntos: Optional[list] = None) -> dict[str, Any]:
     llamadas = 0   # intentos fallidos por 503; las llamadas del intento que funciona las cuenta extraer
     for intento in range(INTENTOS_503):
         try:
-            r = await workflow.ainvoke({"entrada": mensaje})
+            r = await workflow.ainvoke({"entrada": mensaje, "adjuntos_meta": adjuntos})
             llamadas += r.get("llamadas", 1)
             break
         except Exception as e:  # noqa: BLE001
@@ -262,8 +291,10 @@ async def ejecutar_intake(mensaje: str) -> dict[str, Any]:
                 continue
             raise traducir_error(e) from None
     claves = ("estado", "razon", "alerta", "score_global", "campos", "confianza_por_campo", "campos_baja_confianza",
-              "evidencia", "archivos", "request_plunet", "escrituras_plunet", "pasos")
-    return {**{k: r.get(k) for k in claves}, "modelo": MODELO, "llamadas_modelo": llamadas}
+              "evidencia", "archivos", "request_plunet", "escrituras_plunet", "pasos", "volumen", "estimacion")
+    fecha_correo = fecha(_cabecera(mensaje, "Fecha"))
+    return {**{k: r.get(k) for k in claves}, "fecha_correo": fecha_correo.isoformat() if fecha_correo else None,
+            "modelo": MODELO, "llamadas_modelo": llamadas}
 
 
 def traducir_error(e: Exception) -> ErrorContrato:

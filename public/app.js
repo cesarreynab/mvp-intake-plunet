@@ -386,6 +386,28 @@
           marca, typeof conf[clave] === 'number' && tieneValor ? el('span', { clase: 'campo-conf' }, 'confianza ' + dosDecimales(conf[clave])) : null));
     });
 
+    // Volumen y plazo: se recalculan en el servidor (sin modelo) cuando el PM cambia servicio, idiomas o fecha.
+    const plazo = el('section', { clase: 'plazo', 'aria-live': 'polite', 'aria-labelledby': 'h-plazo' });
+    let volumen = d.volumen || null;
+    pintarPlazo(plazo, volumen, manual ? null : d.estimacion, manual);
+    let espera = null;
+    const recalcular = () => {
+      window.clearTimeout(espera);
+      espera = window.setTimeout(async () => {
+        const r = await pedir('/api/estimacion', {
+          message_id: d.message_id, palabras: volumen ? volumen.palabras : null, paginas: volumen ? volumen.paginas : null,
+          fecha_correo: d.fecha_correo, service: servicio.value, deliveryDeadline: entrega.value,
+          targetLanguage: destinos.value.split(/[,;\s]+/).filter(Boolean),
+        }, 10000);
+        if (r.ok) { volumen = r.volumen || volumen; pintarPlazo(plazo, volumen, r.estimacion, false); }
+      }, 400);
+    };
+    if (volumen) {
+      servicio.addEventListener('change', recalcular);
+      entrega.addEventListener('change', recalcular);
+      destinos.addEventListener('input', recalcular);
+    }
+
     const error = el('p', { clase: 'error-campo', role: 'alert', hidden: true });
     const boton = el('button', { type: 'submit', clase: 'boton boton-primario' }, icono('check'), el('span', null, 'Crear Request en Plunet'));
     const form = el('form', { clase: 'form-request', novalidate: true, 'aria-labelledby': 'h-request' },
@@ -394,7 +416,7 @@
       el('p', { clase: 'ayuda' }, manual
         ? 'La evidencia no alcanzó para prellenar (score_global < 0.60). El PM completa el Request a mano.'
         : 'Revisa los campos marcados, corrige lo que haga falta y confirma. Hasta que confirmes, no se crea nada en Plunet.'),
-      ...filas, error,
+      ...filas, plazo, error,
       el('div', { clase: 'acciones' }, boton, el('span', { clase: 'nota-cuota' }, 'Plunet sandbox: no escribe en un Plunet real · no usa el modelo')));
 
     form.addEventListener('submit', async (ev) => {
@@ -415,7 +437,8 @@
       }
       error.hidden = true;
       boton.setAttribute('aria-disabled', 'true');
-      const creado = await confirmar(d.message_id, request);
+      const creado = await confirmar(d.message_id, request, {
+        palabras: volumen ? volumen.palabras : null, paginas: volumen ? volumen.paginas : null, fecha_correo: d.fecha_correo });
       boton.removeAttribute('aria-disabled');
       if (creado.ok) {
         form.replaceWith(vistaCreado(creado));
@@ -435,8 +458,62 @@
     return form;
   }
 
+  const miles = (n) => (typeof n === 'number' ? n.toLocaleString('es-CL') : '—');
+  function fechaCortaIso(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+    return m ? `${Number(m[3])} ${MESES[Number(m[2]) - 1].slice(0, 3)} ${m[1]}` : '—';
+  }
+
+  // Bloque «Volumen y plazo» del borrador: conteo preliminar, días hábiles y semáforo contra la fecha pedida.
+  function pintarPlazo(caja, volumen, est, manual) {
+    const partes = [el('h4', { id: 'h-plazo', clase: 'plazo-titulo' }, icono('cola', 'icono-peq'), 'Volumen y plazo estimado')];
+    if (!volumen) {
+      partes.push(el('p', { clase: 'ayuda' }, 'El correo no trae adjuntos: no hay palabras que contar ni plazo que estimar.'));
+      caja.replaceChildren(...partes);
+      return;
+    }
+    const archivos = volumen.archivos || [];
+    partes.push(el('div', { clase: 'plazo-fila' },
+      el('span', { clase: 'plazo-cifra' }, miles(volumen.palabras)),
+      el('span', null, 'palabras', volumen.paginas ? ` · ${volumen.paginas} ${volumen.paginas === 1 ? 'página' : 'páginas'}` : '',
+        el('span', { clase: 'campo-plunet' }, 'wordCount · conteo preliminar')),
+    ));
+    if (archivos.length) {
+      partes.push(el('ul', { clase: 'plazo-archivos' }, ...archivos.map((a) =>
+        el('li', null, mono(a.nombre), ` · ${miles(a.palabras)} palabras · ${a.fuente}`))));
+    }
+    if (est) {
+      const sem = est.semaforo || 'sin_fecha';
+      const textoPlazo = `${est.dias_habiles} ${est.dias_habiles === 1 ? 'día hábil' : 'días hábiles'}`;
+      let comparacion = 'El cliente no pidió fecha: el PM puede proponer la entrega estimada.';
+      if (sem !== 'sin_fecha') {
+        const h = est.holgura_dias;
+        comparacion = `El cliente da ${est.plazo_cliente_dias_habiles} días hábiles: ` +
+          (h > 0 ? `sobran ${h}.` : h === 0 ? 'no sobra ninguno.' : `faltan ${-h}.`);
+      }
+      partes.push(
+        el('div', { clase: 'plazo-fila' },
+          el('span', { clase: 'plazo-cifra' }, textoPlazo),
+          el('span', { clase: 'semaforo semaforo-' + sem }, etiqueta('semaforos', sem))),
+        el('p', { clase: 'plazo-texto' },
+          est.entrega_estimada ? `Entrega estimada: ${fechaCortaIso(est.entrega_estimada)}, empezando el día hábil siguiente a la recepción. ` : '',
+          comparacion, est.idiomas > 1 ? ` Esfuerzo: ${est.esfuerzo_dias_persona} días-persona (${est.idiomas} idiomas en paralelo).` : ''),
+        el('details', { clase: 'plazo-detalle' },
+          el('summary', null, 'Cómo se calculó'),
+          el('ul', null, ...(est.pasos || []).map((p) => el('li', null, p))),
+          el('p', { clase: 'ayuda' }, 'Supuesto: ' + est.supuesto + ' Días hábiles de lunes a viernes, sin feriados. No es una cotización.')));
+    } else {
+      partes.push(el('p', { clase: 'ayuda' }, manual
+        ? 'Completa servicio e idiomas destino para estimar el plazo.'
+        : 'Para estimar el plazo faltan el servicio o los idiomas destino.'));
+    }
+    partes.push(el('p', { clase: 'plazo-nota' }, volumen.nota || ''));
+    caja.replaceChildren(...partes);
+  }
+
   function vistaCreado(r) {
     const req = r.request || {};
+    const est = r.estimacion;
     return el('section', { clase: 'creado', role: 'status', 'aria-labelledby': 'h-creado' },
       el('div', { clase: 'creado-cabecera' }, icono('check'),
         el('h3', { id: 'h-creado' }, 'Request ', mono(r.request_id), ' creado en Plunet')),
@@ -448,19 +525,24 @@
         ['Servicio', etiqueta('servicios', req.service)],
         ['Tipo de documento', etiqueta('tiposDocumento', req.subject)],
         ['Entrega', fechaLarga(req.deliveryDeadline)],
+        ['Palabras', typeof req.wordCount === 'number' ? miles(req.wordCount) + ' (conteo preliminar)' : '—'],
+        ['Plazo estimado', est ? [`${est.dias_habiles} días hábiles · `, el('span', { clase: 'semaforo semaforo-' + est.semaforo }, etiqueta('semaforos', est.semaforo))] : '—'],
         ['Notas', req.briefDescription || '—'],
       ]));
   }
 
-  async function confirmar(messageId, request) {
+  async function confirmar(messageId, request, extra) {
     if (estado.demo) {
-      await new Promise((ok) => window.setTimeout(ok, 500));
+      // En demostración el Request no se guarda en el servidor, pero el plazo sí se calcula allí (no usa el modelo).
+      const calc = await pedir('/api/estimacion', { message_id: messageId, ...extra, service: request.service,
+        targetLanguage: request.targetLanguage, deliveryDeadline: request.deliveryDeadline }, 10000);
       const c = estado.clientes.find((x) => x.cliente_id === request.customerID) || {};
       return { ok: true, request_id: 'R-DEMO-' + Math.random().toString(16).slice(2, 7).toUpperCase(), estado: 'creado_sandbox',
-        creado_en: new Date().toISOString(), message_id: messageId,
-        request: { ...request, cliente: c.razon_social }, nota: 'Modo demostración: el Request no se envió al servidor.' };
+        creado_en: new Date().toISOString(), message_id: messageId, estimacion: calc.ok ? calc.estimacion : null,
+        request: { ...request, cliente: c.razon_social, wordCount: calc.ok && calc.volumen ? calc.volumen.palabras : null },
+        nota: 'Modo demostración: el Request no se envió al servidor.' };
     }
-    return pedir('/api/plunet/requests', { message_id: messageId, request }, 20000);
+    return pedir('/api/plunet/requests', { message_id: messageId, request, ...extra }, 20000);
   }
 
   /* ---- evidencia, adjuntos, pasos y detalles ---- */

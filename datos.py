@@ -102,6 +102,21 @@ CAMPOS_CLAVE = ["cliente_id", "idioma_origen", "idiomas_destino", "tipo_document
 IDIOMAS_ISO = {"en", "es", "pt", "fr", "de", "it", "nl", "pl", "ru", "zh", "ja", "ko", "ar", "tr", "sv", "da", "fi", "no",
                "cs", "hu", "ro", "el", "he", "uk"}
 
+# ----------------------------------------------------------------------------- volumen y plazo (estimacion.py)
+# Supuestos declarados para estimar el plazo de producción; no son tarifas ni compromisos. Ajústalos a la operación.
+PALABRAS_POR_PAGINA = 250     # solo si un adjunto pegado trae páginas pero no palabras
+RENDIMIENTO = {
+    "traduccion": {"unidad": "palabras", "fases": [("Traducción", 2500)], "extra": [("Revisión bilingüe y QA", 1)],
+                   "supuesto": "Traducción a 2.500 palabras por día por lingüista, más 1 día de revisión y QA."},
+    "traduccion_back_translation": {"unidad": "palabras", "fases": [("Traducción", 2500), ("Back-translation", 2500)],
+                                    "extra": [("Conciliación y QA", 1)],
+                                    "supuesto": "Traducción y back-translation a 2.500 palabras por día cada una, más 1 día de conciliación y QA."},
+    "revision": {"unidad": "palabras", "fases": [("Revisión", 6000)], "extra": [],
+                 "supuesto": "Revisión a 6.000 palabras por día por revisor."},
+    "dtp": {"unidad": "paginas", "fases": [("Maquetación (DTP)", 15)], "extra": [("QA de maquetación", 1)],
+            "supuesto": "Maquetación a 15 páginas por día, más 1 día de QA."},
+}
+
 # Mapeo al objeto Request de Plunet BusinessManager (sesión 1, paso 5)
 MAPEO_PLUNET = {
     "cliente_id": "customerID",
@@ -117,6 +132,7 @@ MAPEO_PLUNET = {
 # ----------------------------------------------------------------------------- bandeja simulada de projects@lilt.com
 # En producción la lee Microsoft Graph y el texto de los adjuntos sale de pypdf / python-docx / openpyxl / python-pptx
 # (con Tesseract si el PDF es escaneado). Aquí cada correo ya trae ese texto, marcado por archivo y página.
+# «palabras» es el conteo del extractor sobre el archivo completo; «contenido» es solo un extracto.
 # Todos los correos, personas y empresas son ficticios.
 BUZON = "projects@lilt.com"
 
@@ -139,7 +155,7 @@ BANDEJA = [
         "asunto": "RV: material",
         "cuerpo": "Hola, necesitamos traducir el material adjunto. Avísenme.\nSaludos",
         "adjuntos": [
-            {"nombre": "kickoff_deck.pptx", "detalle": "12 diapositivas", "contenido": [
+            {"nombre": "kickoff_deck.pptx", "detalle": "12 diapositivas", "palabras": 420, "contenido": [
                 "[diapositiva 1] Project kickoff. Q4 launch plan.",
                 "[diapositiva 2] Timeline, owners and next steps.",
             ]},
@@ -154,7 +170,7 @@ BANDEJA = [
         "cuerpo": "Hola equipo:\nAdjunto el consentimiento informado del estudio BMS-118. Necesitamos la traducción del español "
                   "al inglés y al portugués (Brasil). No hay apuro, para cuando puedan.\nJuan Pérez\nBioMed Sur",
         "adjuntos": [
-            {"nombre": "ICF_BMS-118_ES.pdf", "detalle": "9 páginas, PDF nativo", "contenido": [
+            {"nombre": "ICF_BMS-118_ES.pdf", "detalle": "9 páginas, PDF nativo", "palabras": 2870, "contenido": [
                 "[p.1] CONSENTIMIENTO INFORMADO. Estudio BMS-118: ensayo fase II de BMS-11 en adultos con hipertensión resistente.",
                 "[p.1] Usted ha sido invitado a participar en un estudio de investigación.",
             ]},
@@ -170,7 +186,7 @@ BANDEJA = [
                   "la hizo nuestro distribuidor; necesitamos solo la revisión.\nFecha límite: 30 de octubre de 2026.\n"
                   "Saludos,\nRodrigo Quispe\nMedLabel Andina",
         "adjuntos": [
-            {"nombre": "etiquetas_lote7_ES-PT.xlsx", "detalle": "1 hoja, 120 filas", "contenido": [
+            {"nombre": "etiquetas_lote7_ES-PT.xlsx", "detalle": "1 hoja, 120 filas", "palabras": 960, "contenido": [
                 "[hoja ES-PT, fila 2] Conservar entre 2 °C y 8 °C. | Conservar entre 2 °C e 8 °C.",
                 "[hoja ES-PT, fila 3] No congelar. | Não congelar.",
                 "[hoja ES-PT, fila 4] Mantener fuera del alcance de los niños. | Manter fora do alcance das crianças.",
@@ -187,7 +203,7 @@ BANDEJA = [
                   "español (España) y al francés (Francia) para el 14 de noviembre de 2026.\nEs un documento controlado: por "
                   "favor mantener la numeración de secciones.\nGracias,\nLaura Medina\nClinVida Research",
         "adjuntos": [
-            {"nombre": "CV-2210_Protocol_v3.0.docx", "detalle": "48 páginas, DOCX", "contenido": [
+            {"nombre": "CV-2210_Protocol_v3.0.docx", "detalle": "48 páginas, DOCX", "palabras": 14350, "contenido": [
                 "[p.1] CLINICAL STUDY PROTOCOL. CV-2210: A multicenter, open-label study of CV-22 in patients with chronic kidney disease.",
                 "[p.1] Protocol version 3.0, dated 10 October 2026.",
                 "[p.5] 4. STUDY OBJECTIVES. The primary objective is to evaluate the safety of CV-22 over 24 weeks.",
@@ -203,7 +219,7 @@ BANDEJA = [
         "cuerpo": "Hola, soy de MedLabel Andina. Necesito traducir la etiqueta adjunta del español al inglés para el 30 de "
                   "septiembre de 2026.",
         "adjuntos": [
-            {"nombre": "etiqueta_MLA-22.docx", "detalle": "1 página", "contenido": [
+            {"nombre": "etiqueta_MLA-22.docx", "detalle": "1 página", "palabras": 62, "contenido": [
                 "[p.1] Conservar a temperatura ambiente. Mantener fuera del alcance de los niños. Lote: MLA-22.",
             ]},
         ],
@@ -226,7 +242,7 @@ BANDEJA = [
         "asunto": "Material pacientes",
         "cuerpo": "Hola, por favor traducir el adjunto a los idiomas de siempre. Gracias.\nJuan Pérez",
         "adjuntos": [
-            {"nombre": "folleto_paciente_scan.pdf", "detalle": "6 páginas, escaneado, texto obtenido por OCR", "contenido": [
+            {"nombre": "folleto_paciente_scan.pdf", "detalle": "6 páginas, escaneado, texto obtenido por OCR", "palabras": 1640, "contenido": [
                 "[p.1] PATIENT INFORMATION LEAFLET. How to take your medicine safely.",
                 "[p.1] Read all of this leaflet carefully before you start taking this medicine. Keep this leaflet, you may need to read it again.",
                 "[p.2] Possible side effects: like all medicines, this medicine can cause side effects.",
@@ -243,7 +259,7 @@ BANDEJA = [
                   "back-translation del inglés al español (México) y al portugués (Brasil).\nLa fecha de entrega es el 22 "
                   "de septiembre de 2026. Por favor mantener el formato del sponsor.\nSaludos,\nMaría López\nPharmaXYZ",
         "adjuntos": [
-            {"nombre": "ICF_PX4471_EN.pdf", "detalle": "14 páginas, PDF nativo", "contenido": [
+            {"nombre": "ICF_PX4471_EN.pdf", "detalle": "14 páginas, PDF nativo", "palabras": 4820, "contenido": [
                 "[p.1] INFORMED CONSENT FORM. Study PX-4471: A Phase III, randomized, double-blind study of PX-44 in adults with moderate asthma.",
                 "[p.1] You are being invited to take part in a research study. Please read this form carefully before you decide to participate.",
                 "[p.2] What will happen if I take part? You will visit the study clinic 8 times over 12 months.",
