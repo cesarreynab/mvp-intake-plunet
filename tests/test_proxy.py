@@ -32,7 +32,7 @@ def test_p1_respeta_el_contrato(cliente):
     assert r.status_code == 200
     d = r.json()
     assert d["ok"] is True and d["estado"] == "pendiente_revision"
-    assert set(d) == {"ok", "estado", "razon", "alerta", "score_global", "campos", "confianza_por_campo",
+    assert set(d) == {"ok", "message_id", "estado", "razon", "alerta", "score_global", "campos", "confianza_por_campo",
                       "campos_baja_confianza", "evidencia", "archivos", "request_plunet", "escrituras_plunet",
                       "pasos", "meta"}
     assert d["escrituras_plunet"] == 0
@@ -93,3 +93,55 @@ def test_error_no_expone_traceback(cliente, monkeypatch):
     r = cliente.post("/api/intake", json={"mensaje": P1})
     assert r.status_code == 500
     assert "sk-or" not in r.text and "Traceback" not in r.text
+
+
+def test_bandeja_lista_correos_y_clientes(cliente):
+    d = cliente.get("/api/bandeja").json()
+    assert d["ok"] and d["buzon"] == "projects@lilt.com"
+    assert len(d["correos"]) == 9 and {"id", "de", "asunto", "cuerpo", "adjuntos"} <= set(d["correos"][0])
+    assert {c["cliente_id"] for c in d["clientes"]} >= {"PHX-0148", "MDL-0310"}
+
+
+def test_intake_por_message_id(cliente):
+    r = cliente.post("/api/intake", json={"message_id": "msg-20260915-0912-phx"})
+    d = r.json()
+    assert r.status_code == 200 and d["message_id"] == "msg-20260915-0912-phx"
+    assert d["campos"]["cliente_id"] == "PHX-0148"
+
+
+def test_intake_message_id_desconocido_no_llama_al_modelo(cliente, modelo_simulado):
+    r = cliente.post("/api/intake", json={"message_id": "msg-no-existe"})
+    assert r.status_code == 404 and r.json()["error"]["codigo"] == "validacion"
+    assert modelo_simulado.llamadas == 0
+    assert cliente.post("/api/intake", json={"message_id": "../../etc"}).status_code == 400
+
+
+def test_intake_pegado_no_trae_message_id(cliente):
+    assert cliente.post("/api/intake", json={"mensaje": P1}).json()["message_id"] is None
+
+
+BORRADOR = {"customerID": "MDL-0310", "contrato": "CTR-2026-022", "sourceLanguage": "es", "targetLanguage": ["pt-BR"],
+            "service": "revision", "subject": "etiquetado", "deliveryDeadline": "2026-10-30", "briefDescription": None}
+
+
+def test_crear_request_en_sandbox(cliente, modelo_simulado):
+    r = cliente.post("/api/plunet/requests", json={"message_id": "msg-20261026-1015-mdl", "request": BORRADOR})
+    d = r.json()
+    assert r.status_code == 201 and d["estado"] == "creado_sandbox" and d["request_id"].startswith("R-")
+    assert d["request"]["targetLanguage"] == ["pt-BR"] and d["message_id"] == "msg-20261026-1015-mdl"
+    assert modelo_simulado.llamadas == 0   # confirmar no usa el modelo
+
+
+@pytest.mark.parametrize("cambio,campo", [
+    ({"customerID": "XXX-0000"}, "customerID"), ({"contrato": "CTR-2026-009"}, "contrato"),
+    ({"targetLanguage": []}, "targetLanguage"), ({"targetLanguage": ["es"]}, "targetLanguage"),
+    ({"service": "cotizar"}, "service"), ({"subject": None}, "subject"), ({"deliveryDeadline": "30/10/2026"}, "deliveryDeadline"),
+])
+def test_crear_request_valida_cada_campo(cliente, cambio, campo):
+    r = cliente.post("/api/plunet/requests", json={"request": {**BORRADOR, **cambio}})
+    assert r.status_code == 400 and campo in r.json()["error"]["detalle"]
+
+
+def test_crear_request_respeta_el_codigo_de_acceso(cliente, monkeypatch):
+    monkeypatch.setenv("ACCESS_CODE", "secreto-demo")
+    assert cliente.post("/api/plunet/requests", json={"request": BORRADOR}).status_code == 401

@@ -6,7 +6,7 @@ la calidad de la extracción real se mide con probar_endpoint.py contra el servi
 """
 from pydantic import ValidationError
 
-from datos import SolicitudTraduccion
+from datos import BANDEJA_POR_ID, SolicitudTraduccion, texto_correo
 
 P1 = """De: maria.lopez@pharmaxyz.com
 Para: projects@lilt.com
@@ -61,6 +61,14 @@ Hola, soy de MedLabel Andina. Necesito traducir la etiqueta adjunta del español
 [p.1] Conservar a temperatura ambiente. Mantener fuera del alcance de los niños. Lote: MLA-22."""
 
 
+# Correos nuevos de la bandeja simulada (datos.BANDEJA), además de P1-P4.
+CLV = texto_correo(BANDEJA_POR_ID["msg-20261026-0847-clv"])   # protocolo; cliente sin contrato activo
+MDL = texto_correo(BANDEJA_POR_ID["msg-20261026-1015-mdl"])   # revisión de etiquetas en Excel; todo citado
+BMS = texto_correo(BANDEJA_POR_ID["msg-20261026-1102-bms"])   # ICF sin fecha («para cuando puedan»)
+NFC = texto_correo(BANDEJA_POR_ID["msg-20261026-1230-nfc"])   # remitente desconocido y pedido vago: cola manual
+FAC = texto_correo(BANDEJA_POR_ID["msg-20261026-1310-phx"])   # pide una factura: fuera de alcance
+
+
 def _ev(campo, fuente, fragmento, confianza=0.95):
     return {"campo": campo, "fuente": fuente, "fragmento": fragmento, "confianza": confianza}
 
@@ -105,6 +113,49 @@ EXTRACCIONES = {
             _ev("servicio", "correo", "Necesito traducir"),
             _ev("deadline_solicitado", "correo", "30 de septiembre de 2026"),
         ]),
+    CLV: SolicitudTraduccion(
+        es_solicitud_nueva=True, cliente_nombre="ClinVida Research", idioma_origen="en", idiomas_destino=["es-ES", "fr-FR"],
+        tipo_documento="protocolo", servicio="traduccion", deadline_solicitado="2026-11-14",
+        notas_cliente="Mantener la numeración de secciones.",
+        evidencia=[
+            _ev("idioma_origen", "CV-2210_Protocol_v3.0.docx p.1", "CLINICAL STUDY PROTOCOL"),
+            _ev("idiomas_destino", "correo", "al español (España) y al francés (Francia)"),
+            _ev("tipo_documento", "CV-2210_Protocol_v3.0.docx p.1", "CLINICAL STUDY PROTOCOL"),
+            _ev("servicio", "correo", "Necesitamos la traducción"),
+            _ev("deadline_solicitado", "correo", "14 de noviembre de 2026"),
+            _ev("notas_cliente", "correo", "mantener la numeración de secciones"),
+        ]),
+    MDL: SolicitudTraduccion(
+        es_solicitud_nueva=True, cliente_nombre="MedLabel Andina", idioma_origen="es", idiomas_destino=["pt-BR"],
+        tipo_documento="etiquetado", servicio="revision", deadline_solicitado="2026-10-30",
+        evidencia=[
+            _ev("idioma_origen", "correo", "del español al portugués (Brasil)"),
+            _ev("idiomas_destino", "correo", "del español al portugués (Brasil)"),
+            _ev("tipo_documento", "correo", "las etiquetas del lote 7"),
+            _ev("servicio", "correo", "necesitamos solo la revisión"),
+            _ev("deadline_solicitado", "correo", "30 de octubre de 2026"),
+        ]),
+    BMS: SolicitudTraduccion(
+        es_solicitud_nueva=True, cliente_nombre="BioMed Sur", idioma_origen="es", idiomas_destino=["en", "pt-BR"],
+        tipo_documento="consentimiento_informado", servicio="traduccion", notas_cliente="No hay apuro, para cuando puedan.",
+        evidencia=[
+            _ev("idioma_origen", "ICF_BMS-118_ES.pdf p.1", "CONSENTIMIENTO INFORMADO"),
+            _ev("idiomas_destino", "correo", "del español al inglés y al portugués (Brasil)"),
+            _ev("tipo_documento", "correo", "el consentimiento informado del estudio BMS-118"),
+            _ev("servicio", "correo", "Necesitamos la traducción"),
+            _ev("notas_cliente", "correo", "No hay apuro, para cuando puedan", 0.9),
+        ]),
+    NFC: SolicitudTraduccion(
+        es_solicitud_nueva=True, idioma_origen="en", tipo_documento="otro", servicio="traduccion",
+        evidencia=[
+            _ev("idioma_origen", "kickoff_deck.pptx diapositiva 1", "Project kickoff. Q4 launch plan.", 0.9),
+            _ev("tipo_documento", "kickoff_deck.pptx", "kickoff_deck.pptx", 0.8),
+            _ev("servicio", "correo", "necesitamos traducir el material adjunto", 0.9),
+        ]),
+    FAC: SolicitudTraduccion(
+        es_solicitud_nueva=False, cliente_nombre="PharmaXYZ",
+        motivo_no_solicitud="Pide reenviar una factura; no es una solicitud de traducción.",
+        evidencia=[_ev("cliente_nombre", "correo", "PharmaXYZ")]),
 }
 
 

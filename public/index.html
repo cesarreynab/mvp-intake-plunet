@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Intake de solicitudes · Plunet · MVP</title>
-  <meta name="description" content="MVP con IA: pega el correo de una solicitud de traducción y recibe el Request de Plunet prellenado, con la cita de cada campo. Datos sintéticos.">
+  <meta name="description" content="MVP con IA: el PM abre un correo de solicitud de traducción, el sistema prellena el Request de Plunet con la cita de cada campo y el PM lo confirma. Datos sintéticos.">
   <meta name="color-scheme" content="light dark">
   <meta name="robots" content="noindex">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
-  <a class="saltar" href="#entrada">Saltar al contenido</a>
+  <a class="saltar" href="#bandeja">Saltar al contenido</a>
 
   <!-- Íconos (trazo simple, estilo Feather, licencia MIT). Se usan con <svg class="icono"><use href="#i-nombre"/></svg> -->
   <svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
@@ -36,15 +36,17 @@
       <symbol id="i-flecha" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
       <symbol id="i-codigo" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></symbol>
       <symbol id="i-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></symbol>
+      <symbol id="i-clip" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></symbol>
+      <symbol id="i-correo" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></symbol>
     </defs>
   </svg>
 
   <header class="cabecera">
     <div class="marca">
-      <span class="marca-icono" aria-hidden="true"><svg class="icono"><use href="#i-nube"/></svg></span>
+      <span class="marca-icono" aria-hidden="true"><svg class="icono"><use href="#i-correo"/></svg></span>
       <div>
         <h1 id="titulo">Intake de solicitudes · Plunet</h1>
-        <p id="subtitulo" class="subtitulo">Prellena el Request de Plunet BusinessManager desde el correo del cliente · LILT Operaciones (datos sintéticos)</p>
+        <p id="subtitulo" class="subtitulo">Operaciones LILT · buzón projects@lilt.com · datos sintéticos</p>
       </div>
     </div>
     <p class="conexion" id="conexion" data-estado="comprobando" role="status">
@@ -56,45 +58,51 @@
   <div id="aviso" class="aviso" role="status" hidden></div>
 
   <main class="contenido">
-    <section class="panel panel-entrada" id="entrada" aria-labelledby="t-entrada">
-      <h2 id="t-entrada" class="panel-titulo">Correo de la solicitud</h2>
+    <section class="panel panel-entrada" id="bandeja" aria-labelledby="t-bandeja">
+      <div class="pestanas" role="tablist" aria-label="Origen del correo">
+        <button type="button" role="tab" id="tab-bandeja" class="pestana" aria-selected="true" aria-controls="vista-bandeja">
+          <span id="t-bandeja">Bandeja de entrada</span> <span id="contador-bandeja" class="contador-pestana"></span>
+        </button>
+        <button type="button" role="tab" id="tab-pegar" class="pestana" aria-selected="false" aria-controls="vista-pegar">Pegar correo</button>
+      </div>
 
-      <form id="formulario" novalidate>
-        <div class="ejemplos">
-          <p id="t-ejemplos" class="etiqueta-peq">Prueba con un ejemplo</p>
-          <ul id="lista-ejemplos" class="ejemplos-lista" aria-labelledby="t-ejemplos"></ul>
-        </div>
+      <div id="vista-bandeja" role="tabpanel" aria-labelledby="tab-bandeja">
+        <ul id="lista-correos" class="lista-correos" aria-label="Correos recibidos"></ul>
+        <p class="nota-cuota">La bandeja simula la lectura del buzón con Microsoft Graph. Correos, personas y empresas son ficticios.
+          <button type="button" id="reiniciar" class="enlace-boton">Reiniciar la demo</button></p>
+      </div>
 
-        <label for="mensaje" class="etiqueta">Pega el correo y el texto de sus adjuntos</label>
-        <textarea id="mensaje" name="mensaje" rows="12" maxlength="6000" spellcheck="false"
-                  placeholder="De: …&#10;Fecha: AAAA-MM-DD hh:mm&#10;Asunto: …&#10;&#10;Cuerpo del correo&#10;&#10;--- Adjunto: archivo.pdf (n páginas) ---&#10;[p.1] Texto de la página"
-                  aria-describedby="ayuda-mensaje error-mensaje"></textarea>
-        <div class="fila-meta">
-          <p id="ayuda-mensaje" class="ayuda">Solo datos sintéticos o anonimizados: el modelo gratuito registra el uso.</p>
-          <p id="contador" class="contador" aria-hidden="true">0 / 6000</p>
-        </div>
-        <p id="error-mensaje" class="error-campo" role="alert" hidden></p>
+      <div id="vista-pegar" role="tabpanel" aria-labelledby="tab-pegar" hidden>
+        <form id="formulario" novalidate>
+          <label for="mensaje" class="etiqueta">Pega el correo y el texto de sus adjuntos</label>
+          <textarea id="mensaje" name="mensaje" rows="14" maxlength="6000" spellcheck="false"
+                    placeholder="De: …&#10;Fecha: AAAA-MM-DD hh:mm&#10;Asunto: …&#10;&#10;Cuerpo del correo&#10;&#10;--- Adjunto: archivo.pdf (n páginas) ---&#10;[p.1] Texto de la página"
+                    aria-describedby="ayuda-mensaje error-mensaje"></textarea>
+          <div class="fila-meta">
+            <p id="ayuda-mensaje" class="ayuda">Solo datos sintéticos o anonimizados: el modelo gratuito registra el uso.</p>
+            <p id="contador" class="contador" aria-hidden="true">0 / 6000</p>
+          </div>
+          <p id="error-mensaje" class="error-campo" role="alert" hidden></p>
+          <div class="acciones">
+            <button type="submit" id="enviar-pegado" class="boton boton-primario">
+              <svg class="icono" aria-hidden="true"><use href="#i-enviar"/></svg>
+              <span>Prellenar Request</span>
+            </button>
+            <button type="button" id="limpiar" class="boton boton-secundario">Limpiar</button>
+          </div>
+        </form>
+      </div>
 
-        <div id="bloque-codigo" class="bloque-codigo" hidden>
-          <label for="codigo" class="etiqueta"><svg class="icono icono-peq" aria-hidden="true"><use href="#i-candado"/></svg> Código de acceso</label>
-          <input id="codigo" name="codigo" type="password" autocomplete="off" spellcheck="false" maxlength="100" aria-describedby="ayuda-codigo">
-          <p id="ayuda-codigo" class="ayuda">Te lo entrega quien dicta el curso. Protege la cuota del modelo gratuito.</p>
-        </div>
-
-        <div class="acciones">
-          <button type="submit" id="enviar" class="boton boton-primario">
-            <svg class="icono" aria-hidden="true"><use href="#i-enviar"/></svg>
-            <span id="enviar-texto">Prellenar Request</span>
-            <kbd class="atajo" aria-hidden="true">Ctrl + Enter</kbd>
-          </button>
-          <button type="button" id="limpiar" class="boton boton-secundario">Limpiar</button>
-        </div>
-        <p class="nota-cuota">Cada correo usa una llamada al modelo. Con el modelo gratuito el cupo es de 50 por día: pruébalo con intención.</p>
-      </form>
+      <div id="bloque-codigo" class="bloque-codigo" hidden>
+        <label for="codigo" class="etiqueta"><svg class="icono icono-peq" aria-hidden="true"><use href="#i-candado"/></svg> Código de acceso</label>
+        <input id="codigo" name="codigo" type="password" autocomplete="off" spellcheck="false" maxlength="100" aria-describedby="ayuda-codigo">
+        <p id="ayuda-codigo" class="ayuda">Protege la cuota del modelo. Lo entrega César Reyna junto con la dirección.</p>
+      </div>
     </section>
 
     <section class="panel panel-resultado" aria-labelledby="t-resultado">
-      <h2 id="t-resultado" class="panel-titulo">Resultado</h2>
+      <h2 id="t-resultado" class="solo-lectura">Correo y resultado</h2>
+      <div id="correo" class="correo-vista"></div>
       <div id="resultado" class="resultado" aria-busy="false"></div>
     </section>
   </main>
@@ -102,18 +110,18 @@
 
   <footer class="pie">
     <details class="como">
-      <summary>¿Cómo está conectada esta pantalla?</summary>
+      <summary>¿Cómo funciona por dentro?</summary>
       <div class="como-cuerpo">
         <ol class="flujo" aria-label="Recorrido de una solicitud">
-          <li><strong>Navegador</strong><span>esta página</span></li>
-          <li class="flujo-flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"/></svg></li>
-          <li><strong>Vercel</strong><span>/api/intake</span></li>
+          <li><strong>Bandeja</strong><span>projects@lilt.com</span></li>
           <li class="flujo-flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"/></svg></li>
           <li><strong>Workflow</strong><span>extraer · validar · derivar</span></li>
           <li class="flujo-flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"/></svg></li>
-          <li><strong>Modelo</strong><span>OpenRouter</span></li>
+          <li><strong>PM</strong><span>revisa y corrige</span></li>
+          <li class="flujo-flecha" aria-hidden="true"><svg class="icono"><use href="#i-flecha"/></svg></li>
+          <li><strong>Plunet</strong><span>Request (sandbox)</span></li>
         </ol>
-        <p>Esta página es solo la interfaz. Al pulsar «Prellenar Request», el navegador llama a <code>/api/intake</code> en el mismo sitio. Esa función valida el correo y ejecuta un workflow fijo: una llamada al modelo propone cada campo con su cita, y el código descarta las citas que no aparecen en el correo, identifica al cliente por el dominio, aplica los umbrales y decide el estado. Nada se escribe en Plunet: el PM revisa y crea el Request. Ninguna clave llega al navegador.</p>
+        <p>Al pulsar «Prellenar Request», el servidor ejecuta un workflow fijo: una llamada al modelo propone cada campo con su cita; el código descarta las citas que no aparecen en el correo, identifica al cliente por el dominio del remitente, aplica los umbrales de confianza y decide el estado. El PM revisa los campos marcados, los corrige si hace falta y confirma: recién ahí se crea el Request. En esta demostración Plunet es un sandbox y el Request no se escribe en un Plunet real. Ninguna clave llega al navegador.</p>
       </div>
     </details>
     <p class="pie-nota">Proyecto Final AI · BSG Institute · César Reyna. Datos sintéticos. Un modelo de IA puede equivocarse: el PM revisa cada campo contra su cita antes de crear el Request.</p>

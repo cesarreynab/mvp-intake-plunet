@@ -2,13 +2,18 @@
 
 Adaptado del proxy del Kit MVP (alternativa LangChain). El backend es el workflow de intake.py (ruta B).
 
-Esta función es lo único que ve el navegador. Cada vez que el PM pulsa «Prellenar Request» hace, en orden:
+Rutas:
+  GET  /api/bandeja          la bandeja simulada de projects@lilt.com y la tabla de clientes
+  POST /api/intake           prellena el Request de un correo de la bandeja (message_id) o de uno pegado (mensaje)
+  POST /api/plunet/requests  el PM confirma el borrador y se crea el Request en el Plunet sandbox
+
+Cada vez que el PM pulsa «Prellenar Request», /api/intake hace, en orden:
 
   1. Revisa el código de acceso (solo si definiste ACCESS_CODE en Vercel).
   2. Limita cuántas consultas seguidas puede hacer cada visitante.
-  3. Valida el correo (entre 20 y 6000 caracteres).
+  3. Valida la entrada: un message_id de la bandeja, o un correo de 20 a 6000 caracteres.
   4. Ejecuta el workflow de intake.py: una llamada al modelo y reglas en código.
-  5. Normaliza la respuesta al contrato v1 (contrato.py): siempre la misma forma hacia el navegador.
+  5. Normaliza la respuesta al contrato (contrato.py): siempre la misma forma hacia el navegador.
   6. Deja en los registros solo lo mínimo (id, estado, tiempo). Nunca el contenido de los correos.
 
 Los secretos (la clave de OpenRouter) viven en las variables de entorno de Vercel: ni el navegador ni el código los ven.
@@ -29,6 +34,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from contrato import VERSION, ErrorContrato, normalizar_salida, respuesta_error, validar_entrada
+from datos import BANDEJA, BANDEJA_POR_ID, BUZON, CLIENTES, texto_correo
+from plunet import crear_request
 
 # ----------------------------------------------------------------------------- EDITA AQUÍ
 BACKEND = "langchain"            # etiqueta que muestra la pantalla: n8n | make | langchain
@@ -157,6 +164,15 @@ async def salud() -> JSONResponse:
                       "configurado": configurado(), "requiere_codigo": bool(os.getenv("ACCESS_CODE", "").strip())})
 
 
+@app.get("/api/bandeja")
+async def bandeja() -> JSONResponse:
+    """La bandeja simulada de projects@lilt.com (en producción, Microsoft Graph) y la tabla de clientes para el PM."""
+    return responder({"ok": True, "buzon": BUZON,
+                      "correos": [{k: c[k] for k in ("id", "de_nombre", "de", "fecha", "asunto", "cuerpo", "adjuntos")}
+                                  for c in BANDEJA],
+                      "clientes": [{k: c[k] for k in ("cliente_id", "razon_social", "contratos_activos")} for c in CLIENTES]})
+
+
 @app.post("/api/intake")
 async def intake(request: Request) -> JSONResponse:
     inicio = time.perf_counter()
@@ -164,12 +180,17 @@ async def intake(request: Request) -> JSONResponse:
     try:
         revisar_acceso(request)
         limitar(ip_de(request))
-        mensaje = validar_entrada(await leer_json(request))
+        mensaje, message_id = validar_entrada(await leer_json(request))
+        if message_id:
+            correo = BANDEJA_POR_ID.get(message_id)
+            if correo is None:
+                raise ErrorContrato("validacion", "Ese correo no está en la bandeja.", 404, "message_id desconocido")
+            mensaje = texto_correo(correo)
         crudo = await llamar_backend(mensaje)
-        resultado = normalizar_salida(crudo, backend=BACKEND, ruta=RUTA)
+        resultado = normalizar_salida(crudo, backend=BACKEND, ruta=RUTA, message_id=message_id)
         resultado["meta"]["latencia_ms"] = milisegundos(inicio)
         resultado["meta"]["id"] = id_solicitud
-        registrar(id=id_solicitud, backend=BACKEND, ok=True, estado=resultado["estado"],
+        registrar(id=id_solicitud, backend=BACKEND, ok=True, estado=resultado["estado"], message_id=message_id,
                   llamadas_modelo=resultado["meta"]["llamadas_modelo"], ms=resultado["meta"]["latencia_ms"])
         return responder(resultado)
     except ErrorContrato as e:
@@ -178,6 +199,26 @@ async def intake(request: Request) -> JSONResponse:
     except Exception as e:  # noqa: BLE001  nunca se le devuelve al navegador un traceback
         registrar(id=id_solicitud, backend=BACKEND, ok=False, codigo="backend", error=type(e).__name__, ms=milisegundos(inicio))
         error = ErrorContrato("backend", "Error inesperado en la función de Vercel.", 500, type(e).__name__)
+        return responder(respuesta_error(error, id_solicitud, BACKEND), 500)
+
+
+@app.post("/api/plunet/requests")
+async def crear_request_plunet(request: Request) -> JSONResponse:
+    """El PM confirmó el borrador: se crea el Request en el Plunet sandbox (RF03). No usa el modelo."""
+    id_solicitud = uuid.uuid4().hex[:8]
+    try:
+        revisar_acceso(request)
+        limitar(ip_de(request))
+        creado = crear_request(await leer_json(request))
+        registrar(id=id_solicitud, accion="crear_request", ok=True, request_id=creado["request_id"],
+                  message_id=creado["message_id"])
+        return responder(creado, 201)
+    except ErrorContrato as e:
+        registrar(id=id_solicitud, accion="crear_request", ok=False, codigo=e.codigo, detalle=e.detalle)
+        return responder(respuesta_error(e, id_solicitud, BACKEND), e.status)
+    except Exception as e:  # noqa: BLE001
+        registrar(id=id_solicitud, accion="crear_request", ok=False, error=type(e).__name__)
+        error = ErrorContrato("backend", "Error inesperado al crear el Request.", 500, type(e).__name__)
         return responder(respuesta_error(error, id_solicitud, BACKEND), 500)
 
 

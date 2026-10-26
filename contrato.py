@@ -54,8 +54,16 @@ def limpiar_texto(valor: Any, maximo: int) -> str:
     return texto[:maximo]
 
 
-def validar_entrada(cuerpo: Any) -> str:
-    """Devuelve el mensaje limpio o lanza ErrorContrato('validacion')."""
+_MESSAGE_ID = re.compile(r"^[A-Za-z0-9._-]{3,80}$")
+
+
+def validar_entrada(cuerpo: Any) -> tuple[str | None, str | None]:
+    """Devuelve (mensaje, message_id): o un correo pegado, o el id de un correo de la bandeja. Lanza ErrorContrato."""
+    if isinstance(cuerpo, dict) and cuerpo.get("message_id") is not None:
+        message_id = cuerpo["message_id"]
+        if not isinstance(message_id, str) or not _MESSAGE_ID.match(message_id):
+            raise ErrorContrato("validacion", "El identificador del correo no es válido.", 400, "message_id con formato inválido")
+        return None, message_id
     if not isinstance(cuerpo, dict) or not isinstance(cuerpo.get("mensaje"), str):
         raise ErrorContrato("validacion", "Pega el correo de la solicitud.", 400, "falta el campo mensaje")
     bruto = cuerpo["mensaje"]
@@ -66,7 +74,7 @@ def validar_entrada(cuerpo: Any) -> str:
         raise ErrorContrato("validacion", f"Escribe al menos {MIN_CARACTERES} caracteres.", 400, "mensaje muy corto")
     if len(mensaje) > MAX_CARACTERES:
         raise ErrorContrato("validacion", f"El correo supera los {MAX_CARACTERES} caracteres.", 400, "mensaje demasiado largo")
-    return mensaje
+    return mensaje, None
 
 
 def _entero(valor: Any) -> int | None:
@@ -169,7 +177,7 @@ def _pasos(crudo: Any) -> list[dict]:
     return pasos
 
 
-def normalizar_salida(crudo: Any, *, backend: str, ruta: str = "", modelo: str = "") -> dict:
+def normalizar_salida(crudo: Any, *, backend: str, ruta: str = "", modelo: str = "", message_id: str | None = None) -> dict:
     """Convierte la salida cruda del workflow en la respuesta v1. Lanza ErrorContrato si no se puede."""
     if not isinstance(crudo, dict):
         raise ErrorContrato("respuesta_invalida", "El backend devolvió algo que no es un objeto JSON.", 502, "tipo inesperado")
@@ -181,6 +189,7 @@ def normalizar_salida(crudo: Any, *, backend: str, ruta: str = "", modelo: str =
     ruta_final = (crudo.get("ruta") or ruta or "").upper()
     return {
         "ok": True,
+        "message_id": message_id if message_id and _MESSAGE_ID.match(message_id) else None,
         "estado": estado,
         "razon": limpiar_texto(crudo.get("razon"), 300),
         "alerta": limpiar_texto(crudo.get("alerta"), 300),

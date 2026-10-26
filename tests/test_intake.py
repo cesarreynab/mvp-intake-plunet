@@ -5,7 +5,7 @@ import openai
 import pytest
 
 import intake
-from casos import EXTRACCIONES, P1, P2, P3, P4, ExtractorSimulado
+from casos import BMS, CLV, EXTRACCIONES, FAC, MDL, NFC, P1, P2, P3, P4, ExtractorSimulado
 from contrato import ErrorContrato
 from datos import SolicitudTraduccion
 
@@ -152,3 +152,24 @@ def test_429_se_traduce_a_cuota_ia(monkeypatch):
     with pytest.raises(ErrorContrato) as e:
         correr(P1)
     assert e.value.codigo == "cuota_ia"
+
+
+@pytest.mark.parametrize("texto,estado,revisar", [
+    (CLV, "pendiente_revision", ["contrato_id"]),                       # ClinVida no tiene contrato activo
+    (MDL, "pendiente_revision", []),                                    # todo citado: nada que revisar
+    (BMS, "pendiente_revision", ["deadline_solicitado"]),              # «para cuando puedan» no es una fecha
+    (NFC, "cola_manual", ["idiomas_destino", "deadline_solicitado", "cliente_id", "contrato_id"]),
+    (FAC, "fuera_de_alcance", None),
+])
+def test_correos_de_la_bandeja(modelo_simulado, texto, estado, revisar):
+    r = correr(texto)
+    assert r["estado"] == estado
+    if revisar is not None:
+        assert r["campos_baja_confianza"] == revisar
+
+
+def test_bandeja_tiene_los_casos_del_poc_sin_cambios():
+    from datos import BANDEJA_POR_ID, texto_correo
+    ids = {"msg-20260915-0912-phx": P1, "msg-20260916-1540-bms": P2, "msg-20260917-1105-ntr": P3, "msg-20260918-0830-gml": P4}
+    for message_id, texto in ids.items():
+        assert texto_correo(BANDEJA_POR_ID[message_id]) == texto

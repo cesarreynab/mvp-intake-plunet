@@ -112,3 +112,151 @@ MAPEO_PLUNET = {
     "tipo_documento": "subject",
     "notas_cliente": "briefDescription",
 }
+
+
+# ----------------------------------------------------------------------------- bandeja simulada de projects@lilt.com
+# En producción la lee Microsoft Graph y el texto de los adjuntos sale de pypdf / python-docx / openpyxl / python-pptx
+# (con Tesseract si el PDF es escaneado). Aquí cada correo ya trae ese texto, marcado por archivo y página.
+# Todos los correos, personas y empresas son ficticios.
+BUZON = "projects@lilt.com"
+
+BANDEJA = [
+    {
+        "id": "msg-20261026-1310-phx",
+        "de_nombre": "María López",
+        "de": "maria.lopez@pharmaxyz.com",
+        "fecha": "2026-10-26 13:10",
+        "asunto": "Factura septiembre",
+        "cuerpo": "Hola:\n¿Me pueden reenviar la factura de septiembre del proyecto PX-4471? La necesitamos para el cierre "
+                  "contable.\nGracias,\nMaría López\nPharmaXYZ",
+        "adjuntos": [],
+    },
+    {
+        "id": "msg-20261026-1230-nfc",
+        "de_nombre": "Nueva Farma Consultores",
+        "de": "info@nuevafarma-consultores.com",
+        "fecha": "2026-10-26 12:30",
+        "asunto": "RV: material",
+        "cuerpo": "Hola, necesitamos traducir el material adjunto. Avísenme.\nSaludos",
+        "adjuntos": [
+            {"nombre": "kickoff_deck.pptx", "detalle": "12 diapositivas", "contenido": [
+                "[diapositiva 1] Project kickoff. Q4 launch plan.",
+                "[diapositiva 2] Timeline, owners and next steps.",
+            ]},
+        ],
+    },
+    {
+        "id": "msg-20261026-1102-bms",
+        "de_nombre": "Juan Pérez",
+        "de": "j.perez@biomedsur.cl",
+        "fecha": "2026-10-26 11:02",
+        "asunto": "ICF estudio BMS-118 - inglés y portugués",
+        "cuerpo": "Hola equipo:\nAdjunto el consentimiento informado del estudio BMS-118. Necesitamos la traducción del español "
+                  "al inglés y al portugués (Brasil). No hay apuro, para cuando puedan.\nJuan Pérez\nBioMed Sur",
+        "adjuntos": [
+            {"nombre": "ICF_BMS-118_ES.pdf", "detalle": "9 páginas, PDF nativo", "contenido": [
+                "[p.1] CONSENTIMIENTO INFORMADO. Estudio BMS-118: ensayo fase II de BMS-11 en adultos con hipertensión resistente.",
+                "[p.1] Usted ha sido invitado a participar en un estudio de investigación.",
+            ]},
+        ],
+    },
+    {
+        "id": "msg-20261026-1015-mdl",
+        "de_nombre": "Rodrigo Quispe",
+        "de": "rodrigo.quispe@medlabel.pe",
+        "fecha": "2026-10-26 10:15",
+        "asunto": "Revisión etiquetas lote 7 PT-BR",
+        "cuerpo": "Hola:\nLes envío el Excel con las etiquetas del lote 7. La traducción del español al portugués (Brasil) ya "
+                  "la hizo nuestro distribuidor; necesitamos solo la revisión.\nFecha límite: 30 de octubre de 2026.\n"
+                  "Saludos,\nRodrigo Quispe\nMedLabel Andina",
+        "adjuntos": [
+            {"nombre": "etiquetas_lote7_ES-PT.xlsx", "detalle": "1 hoja, 120 filas", "contenido": [
+                "[hoja ES-PT, fila 2] Conservar entre 2 °C y 8 °C. | Conservar entre 2 °C e 8 °C.",
+                "[hoja ES-PT, fila 3] No congelar. | Não congelar.",
+                "[hoja ES-PT, fila 4] Mantener fuera del alcance de los niños. | Manter fora do alcance das crianças.",
+            ]},
+        ],
+    },
+    {
+        "id": "msg-20261026-0847-clv",
+        "de_nombre": "Laura Medina",
+        "de": "laura.medina@clinvida.com",
+        "fecha": "2026-10-26 08:47",
+        "asunto": "Protocolo CV-2210 v3.0 - traducción ES/FR",
+        "cuerpo": "Buenos días:\nAdjunto la versión 3.0 del protocolo del estudio CV-2210. Necesitamos la traducción al "
+                  "español (España) y al francés (Francia) para el 14 de noviembre de 2026.\nEs un documento controlado: por "
+                  "favor mantener la numeración de secciones.\nGracias,\nLaura Medina\nClinVida Research",
+        "adjuntos": [
+            {"nombre": "CV-2210_Protocol_v3.0.docx", "detalle": "48 páginas, DOCX", "contenido": [
+                "[p.1] CLINICAL STUDY PROTOCOL. CV-2210: A multicenter, open-label study of CV-22 in patients with chronic kidney disease.",
+                "[p.1] Protocol version 3.0, dated 10 October 2026.",
+                "[p.5] 4. STUDY OBJECTIVES. The primary objective is to evaluate the safety of CV-22 over 24 weeks.",
+            ]},
+        ],
+    },
+    {
+        "id": "msg-20260918-0830-gml",
+        "de_nombre": "Ana Ríos",
+        "de": "ana.rios@gmail.com",
+        "fecha": "2026-09-18 08:30",
+        "asunto": "Traducción etiqueta",
+        "cuerpo": "Hola, soy de MedLabel Andina. Necesito traducir la etiqueta adjunta del español al inglés para el 30 de "
+                  "septiembre de 2026.",
+        "adjuntos": [
+            {"nombre": "etiqueta_MLA-22.docx", "detalle": "1 página", "contenido": [
+                "[p.1] Conservar a temperatura ambiente. Mantener fuera del alcance de los niños. Lote: MLA-22.",
+            ]},
+        ],
+    },
+    {
+        "id": "msg-20260917-1105-ntr",
+        "de_nombre": "Klaus Schmidt",
+        "de": "k.schmidt@nordtrial.de",
+        "fecha": "2026-09-17 11:05",
+        "asunto": "RE: Proyecto P-2026-0871 - agregar francés",
+        "cuerpo": "Hola:\nEn el proyecto P-2026-0871 que ya tienen abierto, ¿pueden agregar francés como idioma destino?\n"
+                  "Y envíenme por favor el precio final por correo.\nGracias,\nKlaus Schmidt\nNordTrial GmbH",
+        "adjuntos": [],
+    },
+    {
+        "id": "msg-20260916-1540-bms",
+        "de_nombre": "Juan Pérez",
+        "de": "j.perez@biomedsur.cl",
+        "fecha": "2026-09-16 15:40",
+        "asunto": "Material pacientes",
+        "cuerpo": "Hola, por favor traducir el adjunto a los idiomas de siempre. Gracias.\nJuan Pérez",
+        "adjuntos": [
+            {"nombre": "folleto_paciente_scan.pdf", "detalle": "6 páginas, escaneado, texto obtenido por OCR", "contenido": [
+                "[p.1] PATIENT INFORMATION LEAFLET. How to take your medicine safely.",
+                "[p.1] Read all of this leaflet carefully before you start taking this medicine. Keep this leaflet, you may need to read it again.",
+                "[p.2] Possible side effects: like all medicines, this medicine can cause side effects.",
+            ]},
+        ],
+    },
+    {
+        "id": "msg-20260915-0912-phx",
+        "de_nombre": "María López",
+        "de": "maria.lopez@pharmaxyz.com",
+        "fecha": "2026-09-15 09:12",
+        "asunto": "Traducción urgente ICF - Estudio PX-4471",
+        "cuerpo": "Hola equipo:\nLes adjunto el consentimiento informado del estudio PX-4471. Necesitamos traducción con "
+                  "back-translation del inglés al español (México) y al portugués (Brasil).\nLa fecha de entrega es el 22 "
+                  "de septiembre de 2026. Por favor mantener el formato del sponsor.\nSaludos,\nMaría López\nPharmaXYZ",
+        "adjuntos": [
+            {"nombre": "ICF_PX4471_EN.pdf", "detalle": "14 páginas, PDF nativo", "contenido": [
+                "[p.1] INFORMED CONSENT FORM. Study PX-4471: A Phase III, randomized, double-blind study of PX-44 in adults with moderate asthma.",
+                "[p.1] You are being invited to take part in a research study. Please read this form carefully before you decide to participate.",
+                "[p.2] What will happen if I take part? You will visit the study clinic 8 times over 12 months.",
+            ]},
+        ],
+    },
+]
+BANDEJA_POR_ID = {c["id"]: c for c in BANDEJA}
+
+
+def texto_correo(correo: dict) -> str:
+    """El correo como lo recibe el workflow: cabeceras, cuerpo y el texto de cada adjunto marcado por archivo y página."""
+    partes = [f"De: {correo['de']}\nPara: {BUZON}\nFecha: {correo['fecha']}\nAsunto: {correo['asunto']}\n\n{correo['cuerpo']}"]
+    for a in correo["adjuntos"]:
+        partes.append(f"--- Adjunto: {a['nombre']} ({a['detalle']}) ---\n" + "\n".join(a["contenido"]))
+    return "\n\n".join(partes)
