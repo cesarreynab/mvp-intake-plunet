@@ -42,7 +42,7 @@ El navegador nunca habla con el modelo: habla con un proxy (`app.py`) que guarda
 | **LangChain** | Salida estructurada con la forma exacta del contrato (`with_structured_output`) y un cliente que funciona con cualquier modelo compatible con OpenAI. |
 | **LangGraph** | El workflow como un grafo explícito de pasos pequeños, que se prueban por separado. |
 | **Pydantic** | El contrato de extracción: campos, tipos y valores permitidos. |
-| **OpenRouter + NVIDIA Nemotron 3 Ultra (gratuito)** | El modelo común del curso, con costo USD 0. Se cambia de modelo con la variable `MODEL_ID`, sin tocar el código. |
+| **OpenRouter + NVIDIA Nemotron 3 Ultra (gratuito)** | El modelo común del curso, con costo USD 0. Si falla por el proveedor (saturado, caído, sin respuesta), el sistema reintenta solo con un modelo de respaldo, **Nemotron 3.5 Super**, elegido por prueba: 4 de 4 casos con el principal caído. Ambos se cambian con variables (`MODEL_ID`, `MODEL_ID_RESPALDO`), sin tocar el código. |
 | **FastAPI en Vercel** | Proxy pequeño en una función sin servidor propio; dirección pública en el plan gratuito y publicación con cada `git push`. |
 | **HTML y JavaScript sin frameworks** | Pantalla liviana y fácil de auditar. Todo texto del correo o del modelo entra como texto, nunca como código (`textContent`). |
 
@@ -56,7 +56,7 @@ datos.py          contrato de extracción, prompt, clientes, bandeja simulada, u
 estimacion.py     conteo de palabras y plazo en días hábiles
 plunet.py         Plunet sandbox: valida y crea el Request confirmado por el PM
 public/           pantalla (index.html, app.js, config.js, estilos.css)
-tests/            72 pruebas pytest con un modelo simulado (no gastan cuota)
+tests/            75 pruebas pytest con un modelo simulado (no gastan cuota)
 herramientas/     probar_endpoint.py: prueba un despliegue con los casos del proyecto
 ```
 
@@ -82,12 +82,12 @@ copy .env.example .env            # en macOS o Linux: cp .env.example .env · lu
 python -m uvicorn app:app --env-file .env --port 8010
 ```
 
-Abre http://localhost:8010. Variables opcionales en `.env.example`: `ACCESS_CODE`, `MAX_POR_MINUTO` y `MODEL_ID`.
+Abre http://localhost:8010. Variables opcionales en `.env.example`: `ACCESS_CODE`, `MAX_POR_MINUTO`, `MODEL_ID` y `MODEL_ID_RESPALDO` (ids separados por coma, o `ninguno`).
 
 ## Pruebas
 
 ```
-python -m pytest tests                                                    # 72 pruebas, sin clave ni cuota
+python -m pytest tests                                                    # 75 pruebas, sin clave ni cuota
 python herramientas/probar_endpoint.py https://mvp-intake-plunet.vercel.app --codigo-acceso CODIGO --pausa 3
 python herramientas/probar_endpoint.py https://mvp-intake-plunet.vercel.app --codigo-acceso CODIGO --bandeja --pausa 3
 ```

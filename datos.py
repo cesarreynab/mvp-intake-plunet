@@ -15,6 +15,9 @@ from typing import Any, Literal, Optional, get_args
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 MODEL_ID = "nvidia/nemotron-3-ultra-550b-a55b:free"
+# Respaldo si el principal falla por el proveedor. Elegido por prueba (27 de octubre, P1-P4 con el principal caído):
+# Nemotron 3.5 Super 4 de 4; Laguna S 2.1 2 de 4 (respuestas fuera del contrato); Gemma 4 31B limitado por Google.
+MODELOS_ID_RESPALDO = ["nvidia/nemotron-3.5-super-vl:free"]
 
 
 # ----------------------------------------------------------------------------- contrato de extracción (paso extraer)

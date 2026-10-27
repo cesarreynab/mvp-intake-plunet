@@ -28,12 +28,18 @@ from langgraph.graph import END, START, StateGraph
 from contrato import ErrorContrato
 from estimacion import estimar, fecha, volumen_de_adjuntos, volumen_de_texto
 from datos import (CAMPOS_CLAVE, CAMPOS_DEL_PEDIDO, CLIENTES, CLIENTES_POR_DOMINIO, CONFIANZA_DOMINIO, CONFIANZA_RAZON_SOCIAL,
-                   DOMINIOS_PUBLICOS, IDIOMAS_ISO, MAPEO_PLUNET, MODEL_ID, SYSTEM_PROMPT, UMBRAL_CAMPO,
+                   DOMINIOS_PUBLICOS, IDIOMAS_ISO, MAPEO_PLUNET, MODEL_ID, MODELOS_ID_RESPALDO, SYSTEM_PROMPT, UMBRAL_CAMPO,
                    UMBRAL_GLOBAL, SolicitudTraduccion)
 
 # ----------------------------------------------------------------------------- EDITA AQUÍ
 OPENROUTER_URL = os.getenv("OPENROUTER_BASE_URL", "").strip() or "https://openrouter.ai/api/v1"
 MODELO = os.getenv("MODEL_ID", "").strip() or MODEL_ID   # se puede cambiar desde las variables de Vercel
+# Si el principal falla por el proveedor (saturado, caído, sin respuesta), se prueban estos en orden.
+# En Vercel: MODEL_ID_RESPALDO con ids separados por coma; «ninguno» desactiva el respaldo.
+_respaldo_env = os.getenv("MODEL_ID_RESPALDO", "").strip()
+MODELOS_RESPALDO = [] if _respaldo_env.lower() in ("ninguno", "none") else [
+    m.strip() for m in (_respaldo_env.split(",") if _respaldo_env else MODELOS_ID_RESPALDO)
+    if m.strip() and m.strip() != MODELO]
 ESPERA_MODELO_S = 60       # cuánto espera la llamada al modelo antes de rendirse
 INTENTOS_503 = 2           # el endpoint gratuito devuelve 503 «provider overloaded» de forma intermitente
 PAUSA_503_S = 5
@@ -57,6 +63,7 @@ class Estado(TypedDict, total=False):
     escrituras_plunet: int
     pasos: list
     llamadas: int
+    modelo_usado: str
     adjuntos_meta: Optional[list]   # adjuntos de la bandeja con su conteo de palabras; None si el correo se pegó
     volumen: Optional[dict]
     estimacion: Optional[dict]
@@ -96,26 +103,74 @@ def listar_adjuntos(entrada: str) -> list[dict]:
 
 
 # ----------------------------------------------------------------------------- el modelo
-_extractor = None
+_extractor = None                         # modelo principal
+_extractores_respaldo: dict[str, Any] = {}   # un cliente por modelo de respaldo
+
+
+def _crear_extractor(modelo: str):
+    from langchain_openai import ChatOpenAI
+    llm = ChatOpenAI(
+        model=modelo,
+        base_url=OPENROUTER_URL,
+        api_key=os.environ["OPENROUTER_API_KEY"].strip(),   # un salto de línea pegado en Vercel invalida la cabecera
+        temperature=0,
+        max_tokens=4096,
+        timeout=ESPERA_MODELO_S,
+        max_retries=1,
+    )
+    # include_raw: un error de esquema vuelve como dato (parsing_error) y no como excepción, para poder reintentar
+    return llm.with_structured_output(SolicitudTraduccion, method="function_calling", include_raw=True)
 
 
 def obtener_extractor():
     """Crea el cliente la primera vez y lo reutiliza mientras la instancia de Vercel siga viva."""
     global _extractor
     if _extractor is None:
-        from langchain_openai import ChatOpenAI
-        llm = ChatOpenAI(
-            model=MODELO,
-            base_url=OPENROUTER_URL,
-            api_key=os.environ["OPENROUTER_API_KEY"].strip(),   # un salto de línea pegado en Vercel invalida la cabecera
-            temperature=0,
-            max_tokens=4096,
-            timeout=ESPERA_MODELO_S,
-            max_retries=1,
-        )
-        # include_raw: un error de esquema vuelve como dato (parsing_error) y no como excepción, para poder reintentar
-        _extractor = llm.with_structured_output(SolicitudTraduccion, method="function_calling", include_raw=True)
+        _extractor = _crear_extractor(MODELO)
     return _extractor
+
+
+def obtener_extractor_respaldo(modelo: str):
+    if modelo not in _extractores_respaldo:
+        _extractores_respaldo[modelo] = _crear_extractor(modelo)
+    return _extractores_respaldo[modelo]
+
+
+def _falla_del_proveedor(e: Exception) -> bool:
+    """Fallas en las que otro modelo puede responder: saturación, caída, modelo retirado, límite del proveedor,
+    tiempo agotado o conexión. Un error de clave (401/403) no cambia con otro modelo."""
+    if isinstance(e, (openai.APITimeoutError, openai.APIConnectionError, openai.RateLimitError)):
+        return True
+    if isinstance(e, openai.APIStatusError):
+        return e.status_code in (404, 408, 429) or e.status_code >= 500
+    texto = str(e)
+    return "503" in texto or "Upstream" in texto or "overloaded" in texto.lower()
+
+
+def _motivo(e: Exception) -> str:
+    return type(e).__name__ + (f" {e.status_code}" if isinstance(e, openai.APIStatusError) else "")
+
+
+async def _invocar_con_respaldo(mensajes: list) -> tuple[dict, str, int, str]:
+    """Devuelve (salida, modelo que respondió, llamadas hechas, motivo del cambio de modelo o '').
+    Prueba el principal y, si falla por el proveedor, cada respaldo en orden. Si todos fallan, lanza la última falla."""
+    try:
+        return await obtener_extractor().ainvoke(mensajes), MODELO, 1, ""
+    except Exception as e:  # noqa: BLE001
+        if not MODELOS_RESPALDO or not _falla_del_proveedor(e):
+            raise
+        motivos = [f"{MODELO}: {_motivo(e)}"]
+        ultima = e
+    for i, modelo in enumerate(MODELOS_RESPALDO):
+        try:
+            salida = await obtener_extractor_respaldo(modelo).ainvoke(mensajes)
+            return salida, modelo, i + 2, "; ".join(motivos)
+        except Exception as e:  # noqa: BLE001
+            if not _falla_del_proveedor(e):
+                raise
+            motivos.append(f"{modelo}: {_motivo(e)}")
+            ultima = e
+    raise ultima
 
 
 def _donde_fallo(error: Any) -> str:
@@ -130,8 +185,10 @@ def _donde_fallo(error: Any) -> str:
 # ----------------------------------------------------------------------------- nodos
 async def extraer(r: Estado) -> dict:
     mensajes = [("system", SYSTEM_PROMPT), ("human", r["entrada"])]
+    llamadas, modelo, motivo = 0, MODELO, ""
     for intento in range(1, INTENTOS_ESQUEMA + 1):
-        salida = await obtener_extractor().ainvoke(mensajes)
+        salida, modelo, n, motivo = await _invocar_con_respaldo(mensajes)
+        llamadas += n
         s, error = salida.get("parsed"), salida.get("parsing_error")
         if s is not None and error is None:
             break
@@ -143,8 +200,9 @@ async def extraer(r: Estado) -> dict:
                      if s.get(k)) + (1 if s.get("idiomas_destino") else 0)
     paso = {"tipo": "paso", "nombre": "extraer",
             "detalle": f"modelo → {propuestos} campos propuestos, {len(s.get('evidencia') or [])} citas"
-                       + (" (reintento: la 1.ª salida no cumplió el esquema)" if intento > 1 else "")}
-    return {"solicitud": s, "pasos": [paso], "llamadas": intento}
+                       + (" (reintento: la 1.ª salida no cumplió el esquema)" if intento > 1 else "")
+                       + (f" · respondió el modelo de respaldo {modelo} porque el principal falló ({motivo})" if motivo else "")}
+    return {"solicitud": s, "pasos": [paso], "llamadas": llamadas, "modelo_usado": modelo}
 
 
 def _identificar_cliente(entrada: str, nombre_propuesto: Optional[str]) -> tuple[Optional[dict], float, str, str]:
@@ -311,7 +369,7 @@ async def ejecutar_intake(mensaje: str, adjuntos: Optional[list] = None) -> dict
               "evidencia", "archivos", "request_plunet", "escrituras_plunet", "pasos", "volumen", "estimacion")
     fecha_correo = fecha(_cabecera(mensaje, "Fecha"))
     return {**{k: r.get(k) for k in claves}, "fecha_correo": fecha_correo.isoformat() if fecha_correo else None,
-            "modelo": MODELO, "llamadas_modelo": llamadas}
+            "modelo": r.get("modelo_usado") or MODELO, "llamadas_modelo": llamadas}
 
 
 def traducir_error(e: Exception) -> ErrorContrato:

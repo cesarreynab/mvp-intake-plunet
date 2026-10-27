@@ -107,13 +107,32 @@ def test_normalizar_idioma(valor, con_region, esperado):
     assert intake.normalizar_idioma(valor, con_region) == esperado
 
 
-def test_reintenta_una_vez_ante_503(monkeypatch):
+def test_503_del_principal_lo_resuelve_el_respaldo(monkeypatch):
+    simulado = ExtractorSimulado(fallas=[ValueError("Error code: 503 - provider overloaded")])
+    monkeypatch.setattr(intake, "_extractor", simulado)
+    r = correr(P1)
+    assert r["estado"] == "pendiente_revision"
+    assert r["llamadas_modelo"] == 2 and r["modelo"] == "respaldo/simulado"
+    assert "modelo de respaldo" in r["pasos"][0]["detalle"]
+
+
+def test_sin_respaldo_reintenta_el_workflow_ante_503(monkeypatch):
+    monkeypatch.setattr(intake, "MODELOS_RESPALDO", [])
     simulado = ExtractorSimulado(fallas=[ValueError("Error code: 503 - provider overloaded")])
     monkeypatch.setattr(intake, "_extractor", simulado)
     monkeypatch.setattr(intake, "PAUSA_503_S", 0)
     r = correr(P1)
-    assert r["estado"] == "pendiente_revision"
-    assert r["llamadas_modelo"] == 2
+    assert r["estado"] == "pendiente_revision" and r["llamadas_modelo"] == 2 and r["modelo"] == intake.MODELO
+
+
+def test_error_de_clave_no_usa_el_respaldo(monkeypatch):
+    respuesta = type("R", (), {"status_code": 401, "headers": {}, "request": None})()
+    error = openai.AuthenticationError("clave inválida", response=respuesta, body=None)
+    simulado = ExtractorSimulado(fallas=[error])
+    monkeypatch.setattr(intake, "_extractor", simulado)
+    with pytest.raises(ErrorContrato) as e:
+        correr(P1)
+    assert "clave" in e.value.mensaje and simulado.llamadas == 1
 
 
 @pytest.mark.parametrize("campo,valor", [("tipo_documento", "modificacion_proyecto"), ("tipo_documento", ""),
@@ -148,7 +167,8 @@ def test_salida_fuera_de_esquema_dos_veces_da_error_claro(monkeypatch):
 def test_429_se_traduce_a_cuota_ia(monkeypatch):
     respuesta = type("R", (), {"status_code": 429, "headers": {}, "request": None})()
     error = openai.RateLimitError("rate limit", response=respuesta, body=None)
-    monkeypatch.setattr(intake, "_extractor", ExtractorSimulado(fallas=[error]))
+    # el principal y el respaldo responden 429: se agotó la cuota de la cuenta
+    monkeypatch.setattr(intake, "_extractor", ExtractorSimulado(fallas=[error, error]))
     with pytest.raises(ErrorContrato) as e:
         correr(P1)
     assert e.value.codigo == "cuota_ia"
@@ -193,3 +213,13 @@ def test_instruccion_escondida_en_un_adjunto_no_prellena_el_pedido(monkeypatch):
     assert {"idiomas_destino", "deadline_solicitado"} <= set(r["campos_baja_confianza"])
     assert "solo aparecen en un adjunto" in r["alerta"]
     assert r["campos"]["servicio"] == "traduccion"          # «por favor traducir el adjunto» sí está en el correo
+
+
+def test_si_el_primer_respaldo_falla_responde_el_segundo(monkeypatch):
+    simulado = ExtractorSimulado(fallas=[ValueError("Error code: 503 - overloaded"), ValueError("Upstream error 503")])
+    monkeypatch.setattr(intake, "_extractor", simulado)
+    monkeypatch.setattr(intake, "MODELOS_RESPALDO", ["respaldo/uno", "respaldo/dos"])
+    monkeypatch.setattr(intake, "_extractores_respaldo", {m: intake._extractores_respaldo["respaldo/simulado"]
+                                                          for m in ("respaldo/uno", "respaldo/dos")})
+    r = correr(P1)
+    assert r["modelo"] == "respaldo/dos" and r["llamadas_modelo"] == 3 and r["estado"] == "pendiente_revision"
