@@ -107,7 +107,7 @@ def obtener_extractor():
         llm = ChatOpenAI(
             model=MODELO,
             base_url=OPENROUTER_URL,
-            api_key=os.environ["OPENROUTER_API_KEY"],
+            api_key=os.environ["OPENROUTER_API_KEY"].strip(),   # un salto de línea pegado en Vercel invalida la cabecera
             temperature=0,
             max_tokens=4096,
             timeout=ESPERA_MODELO_S,
