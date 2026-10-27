@@ -35,7 +35,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from contrato import VERSION, ErrorContrato, normalizar_salida, respuesta_error, validar_entrada
-from datos import BANDEJA, BANDEJA_POR_ID, BUZON, CLIENTES, texto_correo
+from datos import BANDEJA, BANDEJA_POR_ID, BUZON, CLIENTES, MODELOS_ID_RESPALDO, texto_correo
 from estimacion import estimar_borrador
 from plunet import crear_request
 
@@ -163,7 +163,14 @@ async def llamar_backend(mensaje: str, adjuntos: list | None = None) -> Any:
 async def salud() -> JSONResponse:
     """La pantalla pregunta aquí si hay backend y si pide código. No revela ningún secreto."""
     return responder({"ok": True, "version": VERSION, "backend": BACKEND, "ruta": RUTA,
-                      "configurado": configurado(), "requiere_codigo": bool(os.getenv("ACCESS_CODE", "").strip())})
+                      "configurado": configurado(), "requiere_codigo": bool(os.getenv("ACCESS_CODE", "").strip()),
+                      "respaldo": respaldo_activo()})
+
+
+def respaldo_activo() -> bool:
+    """Si hay un modelo de respaldo configurado (misma regla que intake.py, sin cargar LangChain)."""
+    valor = os.getenv("MODEL_ID_RESPALDO", "").strip()
+    return valor.lower() not in ("ninguno", "none") and bool(valor or MODELOS_ID_RESPALDO)
 
 
 @app.get("/api/bandeja")

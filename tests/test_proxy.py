@@ -18,7 +18,7 @@ def cliente(monkeypatch, modelo_simulado):
 def test_health_no_revela_secretos(cliente):
     d = cliente.get("/api/health").json()
     assert d == {"ok": True, "version": "1.0-plunet", "backend": "langchain", "ruta": "B",
-                 "configurado": True, "requiere_codigo": False}
+                 "configurado": True, "requiere_codigo": False, "respaldo": True}
 
 
 def test_sin_clave_responde_sin_configurar(cliente, monkeypatch):
