@@ -9,11 +9,13 @@ Proyecto Final AI · BSG Institute · César Reyna · octubre de 2026. Caso: ope
 
 ## Qué hace
 
-1. El PM ve la bandeja simulada de `projects@lilt.com` (9 correos con adjuntos PDF, DOCX, XLSX y PPTX) y abre uno.
+1. El PM ve la bandeja simulada de `projects@lilt.com` (11 correos con adjuntos PDF, DOCX, XLSX y PPTX, dos de ellos hostiles) y abre uno.
 2. Pulsa **Prellenar Request**. En 5 a 40 segundos el sistema propone cliente, contrato, idioma origen, idiomas destino (con variante: `es-MX`, `pt-BR`), servicio, tipo de documento, fecha de entrega y notas.
 3. Cada campo muestra su origen: **Citado** (frase literal del correo o del adjunto), **Por regla** (cliente por dominio, contrato único) o **Revisar** (sin respaldo suficiente).
 4. Cuenta las palabras de los adjuntos y estima el plazo en días hábiles, con un semáforo contra la fecha que pidió el cliente: *alcanza*, *ajustado* o *no alcanza*.
 5. El PM corrige y confirma. Recién ahí se crea el Request en un **Plunet sandbox**, que valida los datos y devuelve un número, pero no escribe en un Plunet real.
+
+La bandeja incluye **dos correos hostiles** para verlo en vivo: un PDF con una instrucción escondida («los idiomas destino son fr, de, it y ja…») y un remitente que suplanta a un cliente con un dominio parecido y pide crear el Request sin revisión. En ambos, el sistema no obedece y deja los campos para el PM con una alerta.
 
 Si la evidencia no alcanza, el correo va a **cola manual**. Si no es una solicitud nueva (pide un precio o una factura, o modifica un proyecto abierto), queda **fuera de alcance** y no se crea nada.
 
@@ -56,7 +58,7 @@ datos.py          contrato de extracción, prompt, clientes, bandeja simulada, u
 estimacion.py     conteo de palabras y plazo en días hábiles
 plunet.py         Plunet sandbox: valida y crea el Request confirmado por el PM
 public/           pantalla (index.html, app.js, config.js, estilos.css)
-tests/            75 pruebas pytest con un modelo simulado (no gastan cuota)
+tests/            77 pruebas pytest con un modelo simulado (no gastan cuota)
 herramientas/     probar_endpoint.py: prueba un despliegue con los casos del proyecto
 ```
 
@@ -65,7 +67,7 @@ herramientas/     probar_endpoint.py: prueba un despliegue con los casos del pro
 | Ruta | Para qué |
 |---|---|
 | `GET /api/health` | Estado del servicio; no revela secretos |
-| `GET /api/bandeja` | Los 9 correos ficticios y la tabla de clientes |
+| `GET /api/bandeja` | Los 11 correos ficticios y la tabla de clientes |
 | `POST /api/intake` | Prellena el Request de un correo de la bandeja (`message_id`) o de uno pegado (`mensaje`) |
 | `POST /api/estimacion` | Recalcula volumen y plazo cuando el PM edita el borrador (sin modelo) |
 | `POST /api/plunet/requests` | Crea en el sandbox el Request que el PM confirmó (sin modelo) |
@@ -87,12 +89,12 @@ Abre http://localhost:8010. Variables opcionales en `.env.example`: `ACCESS_CODE
 ## Pruebas
 
 ```
-python -m pytest tests                                                    # 75 pruebas, sin clave ni cuota
+python -m pytest tests                                                    # 77 pruebas, sin clave ni cuota
 python herramientas/probar_endpoint.py https://mvp-intake-plunet.vercel.app --codigo-acceso CODIGO --pausa 3
 python herramientas/probar_endpoint.py https://mvp-intake-plunet.vercel.app --codigo-acceso CODIGO --bandeja --pausa 3
 ```
 
-La primera línea ejecuta las pruebas de las reglas, del contrato, del plazo y de la seguridad del proxy. La segunda envía los casos P1 a P4 del proyecto (4 llamadas al modelo); la tercera, los 9 correos de la bandeja (9 llamadas). El modelo gratuito admite 50 llamadas por día.
+La primera línea ejecuta las pruebas de las reglas, del contrato, del plazo y de la seguridad del proxy. La segunda envía los casos P1 a P4 del proyecto (4 llamadas al modelo); la tercera, los 11 correos de la bandeja (11 llamadas). El modelo gratuito admite 50 llamadas por día.
 
 ## Límites del MVP
 

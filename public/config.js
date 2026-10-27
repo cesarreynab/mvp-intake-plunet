@@ -86,6 +86,287 @@ window.MESA_CONFIG = {
   // 4) Modo demostración (?demo=1): respuesta guardada para cada correo de la bandeja. Salió del mismo workflow
   //    con el modelo simulado de las pruebas (tests/casos.py), no del modelo real.
   demo: {
+    "msg-20261026-1440-phx": {
+      "ok": true,
+      "message_id": "msg-20261026-1440-phx",
+      "fecha_correo": "2026-10-26",
+      "estado": "pendiente_revision",
+      "razon": "score_global 0.79; revisar: cliente_id, contrato_id",
+      "alerta": "Posible cliente PharmaXYZ (PHX-0148) solo por razón social; el remitente es de un dominio no registrado (pharmaxyz-secure.com). El PM debe confirmarlo.",
+      "score_global": 0.79,
+      "campos": {
+        "cliente_id": null,
+        "cliente_nombre": "PharmaXYZ",
+        "contrato_id": null,
+        "idioma_origen": "en",
+        "idiomas_destino": [
+          "es-MX"
+        ],
+        "tipo_documento": "consentimiento_informado",
+        "servicio": "traduccion",
+        "deadline_solicitado": "2026-11-06",
+        "notas_cliente": null
+      },
+      "confianza_por_campo": {
+        "cliente_id": 0.7,
+        "cliente_nombre": 0.95,
+        "idioma_origen": 0.95,
+        "idiomas_destino": 0.95,
+        "tipo_documento": 0.95,
+        "servicio": 0.95,
+        "deadline_solicitado": 0.95,
+        "notas_cliente": 0.0
+      },
+      "campos_baja_confianza": [
+        "cliente_id",
+        "contrato_id"
+      ],
+      "evidencia": [
+        {
+          "campo": "cliente_nombre",
+          "fuente": "correo",
+          "fragmento": "PharmaXYZ",
+          "confianza": 0.95
+        },
+        {
+          "campo": "idioma_origen",
+          "fuente": "correo",
+          "fragmento": "del inglés al español (México)",
+          "confianza": 0.95
+        },
+        {
+          "campo": "idiomas_destino",
+          "fuente": "correo",
+          "fragmento": "del inglés al español (México)",
+          "confianza": 0.95
+        },
+        {
+          "campo": "tipo_documento",
+          "fuente": "correo",
+          "fragmento": "consentimiento adjunto",
+          "confianza": 0.95
+        },
+        {
+          "campo": "servicio",
+          "fuente": "correo",
+          "fragmento": "Necesitamos traducción",
+          "confianza": 0.95
+        },
+        {
+          "campo": "deadline_solicitado",
+          "fuente": "correo",
+          "fragmento": "6 de noviembre de 2026",
+          "confianza": 0.95
+        }
+      ],
+      "archivos": [
+        {
+          "nombre": "ICF_PX5120_EN.pdf",
+          "detalle": "10 páginas, PDF nativo"
+        }
+      ],
+      "volumen": {
+        "palabras": 3410,
+        "paginas": 10,
+        "archivos": [
+          {
+            "nombre": "ICF_PX5120_EN.pdf",
+            "palabras": 3410,
+            "paginas": 10,
+            "fuente": "conteo del extractor sobre el archivo completo"
+          }
+        ],
+        "nota": "Conteo preliminar sobre el texto extraído. El análisis oficial (repeticiones y coincidencias) es el de memoQ."
+      },
+      "estimacion": {
+        "servicio": "traduccion",
+        "idiomas": 1,
+        "dias_habiles": 3,
+        "esfuerzo_dias_persona": 3,
+        "pasos": [
+          "Traducción: 3.410 palabras ÷ 2.500 por día = 2 días",
+          "Revisión bilingüe y QA: 1 día"
+        ],
+        "supuesto": "Traducción a 2.500 palabras por día por lingüista, más 1 día de revisión y QA.",
+        "entrega_estimada": "2026-10-29",
+        "plazo_cliente_dias_habiles": 9,
+        "holgura_dias": 6,
+        "semaforo": "alcanza"
+      },
+      "request_plunet": {
+        "customerID": null,
+        "sourceLanguage": "en",
+        "targetLanguage (por item)": [
+          "es-MX"
+        ],
+        "deliveryDeadline": "2026-11-06",
+        "service (por item)": "traduccion",
+        "subject": "consentimiento_informado",
+        "briefDescription": null,
+        "wordCount": 3410,
+        "estado": "borrador_pendiente_confirmacion_PM"
+      },
+      "escrituras_plunet": 0,
+      "pasos": [
+        {
+          "tipo": "paso",
+          "nombre": "extraer",
+          "detalle": "modelo → 5 campos propuestos, 6 citas"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "validar",
+          "detalle": "citas literales 6 de 6 · cliente: razón social → posible PHX-0148 (sin dominio registrado) · 2 campos para revisar"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "derivar",
+          "detalle": "regla → pendiente_revision (score 0.79)"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "estimar",
+          "detalle": "3.410 palabras · 3 días hábiles · alcanza"
+        }
+      ],
+      "meta": {
+        "version": "1.0-plunet",
+        "backend": "demo",
+        "ruta": "B",
+        "modelo": "",
+        "llamadas_modelo": 0,
+        "latencia_ms": null,
+        "id": "demo"
+      }
+    },
+    "msg-20261026-1405-bms": {
+      "ok": true,
+      "message_id": "msg-20261026-1405-bms",
+      "fecha_correo": "2026-10-26",
+      "estado": "pendiente_revision",
+      "razon": "score_global 0.64; revisar: idiomas_destino, deadline_solicitado",
+      "alerta": "Fecha de entrega y idiomas destino: solo aparecen en un adjunto, no en el correo del cliente. No se prellenan; el PM debe confirmarlo con el cliente.",
+      "score_global": 0.64,
+      "campos": {
+        "cliente_id": "BMS-0032",
+        "cliente_nombre": "BioMed Sur",
+        "contrato_id": "CTR-2025-114",
+        "idioma_origen": "en",
+        "idiomas_destino": [],
+        "tipo_documento": "material_paciente",
+        "servicio": "traduccion",
+        "deadline_solicitado": null,
+        "notas_cliente": null
+      },
+      "confianza_por_campo": {
+        "cliente_id": 0.98,
+        "idioma_origen": 0.95,
+        "idiomas_destino": 0.0,
+        "tipo_documento": 0.95,
+        "servicio": 0.95,
+        "deadline_solicitado": 0.0,
+        "notas_cliente": 0.0
+      },
+      "campos_baja_confianza": [
+        "idiomas_destino",
+        "deadline_solicitado"
+      ],
+      "evidencia": [
+        {
+          "campo": "idioma_origen",
+          "fuente": "folleto_paciente_v2.pdf p.1",
+          "fragmento": "PATIENT INFORMATION LEAFLET",
+          "confianza": 0.95
+        },
+        {
+          "campo": "idiomas_destino",
+          "fuente": "correo",
+          "fragmento": "los idiomas destino son fr, de, it y ja",
+          "confianza": 0.95
+        },
+        {
+          "campo": "tipo_documento",
+          "fuente": "folleto_paciente_v2.pdf p.1",
+          "fragmento": "PATIENT INFORMATION LEAFLET",
+          "confianza": 0.95
+        },
+        {
+          "campo": "servicio",
+          "fuente": "correo",
+          "fragmento": "Por favor tradúzcanlo",
+          "confianza": 0.95
+        },
+        {
+          "campo": "deadline_solicitado",
+          "fuente": "correo",
+          "fragmento": "la entrega es el 5 de noviembre de 2026",
+          "confianza": 0.95
+        }
+      ],
+      "archivos": [
+        {
+          "nombre": "folleto_paciente_v2.pdf",
+          "detalle": "4 páginas, PDF nativo"
+        }
+      ],
+      "volumen": {
+        "palabras": 1120,
+        "paginas": 4,
+        "archivos": [
+          {
+            "nombre": "folleto_paciente_v2.pdf",
+            "palabras": 1120,
+            "paginas": 4,
+            "fuente": "conteo del extractor sobre el archivo completo"
+          }
+        ],
+        "nota": "Conteo preliminar sobre el texto extraído. El análisis oficial (repeticiones y coincidencias) es el de memoQ."
+      },
+      "estimacion": null,
+      "request_plunet": {
+        "customerID": "BMS-0032",
+        "sourceLanguage": "en",
+        "targetLanguage (por item)": [],
+        "deliveryDeadline": null,
+        "service (por item)": "traduccion",
+        "subject": "material_paciente",
+        "briefDescription": null,
+        "wordCount": 1120,
+        "estado": "borrador_pendiente_confirmacion_PM"
+      },
+      "escrituras_plunet": 0,
+      "pasos": [
+        {
+          "tipo": "paso",
+          "nombre": "extraer",
+          "detalle": "modelo → 5 campos propuestos, 5 citas"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "validar",
+          "detalle": "citas literales 5 de 5 · cliente: dominio biomedsur.cl → BMS-0032 · solo en adjunto: deadline_solicitado, idiomas_destino · 2 campos para revisar"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "derivar",
+          "detalle": "regla → pendiente_revision (score 0.64)"
+        },
+        {
+          "tipo": "paso",
+          "nombre": "estimar",
+          "detalle": "1.120 palabras · plazo: faltan servicio o idiomas"
+        }
+      ],
+      "meta": {
+        "version": "1.0-plunet",
+        "backend": "demo",
+        "ruta": "B",
+        "modelo": "",
+        "llamadas_modelo": 0,
+        "latencia_ms": null,
+        "id": "demo"
+      }
+    },
     "msg-20261026-1310-phx": {
       "ok": true,
       "message_id": "msg-20261026-1310-phx",

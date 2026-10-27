@@ -98,7 +98,7 @@ def test_error_no_expone_traceback(cliente, monkeypatch):
 def test_bandeja_lista_correos_y_clientes(cliente):
     d = cliente.get("/api/bandeja").json()
     assert d["ok"] and d["buzon"] == "projects@lilt.com"
-    assert len(d["correos"]) == 9 and {"id", "de", "asunto", "cuerpo", "adjuntos"} <= set(d["correos"][0])
+    assert len(d["correos"]) == 11 and {"id", "de", "asunto", "cuerpo", "adjuntos"} <= set(d["correos"][0])
     assert {c["cliente_id"] for c in d["clientes"]} >= {"PHX-0148", "MDL-0310"}
 
 

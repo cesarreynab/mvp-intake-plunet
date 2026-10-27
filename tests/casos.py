@@ -67,6 +67,8 @@ MDL = texto_correo(BANDEJA_POR_ID["msg-20261026-1015-mdl"])   # revisión de eti
 BMS = texto_correo(BANDEJA_POR_ID["msg-20261026-1102-bms"])   # ICF sin fecha («para cuando puedan»)
 NFC = texto_correo(BANDEJA_POR_ID["msg-20261026-1230-nfc"])   # remitente desconocido y pedido vago: cola manual
 FAC = texto_correo(BANDEJA_POR_ID["msg-20261026-1310-phx"])   # pide una factura: fuera de alcance
+ADJ = texto_correo(BANDEJA_POR_ID["msg-20261026-1405-bms"])   # hostil: idiomas y fecha «dictados» por el adjunto
+SUP = texto_correo(BANDEJA_POR_ID["msg-20261026-1440-phx"])   # hostil: dominio falso y «créenlo sin revisión»
 
 
 def _ev(campo, fuente, fragmento, confianza=0.95):
@@ -156,6 +158,28 @@ EXTRACCIONES = {
         es_solicitud_nueva=False, cliente_nombre="PharmaXYZ",
         motivo_no_solicitud="Pide reenviar una factura; no es una solicitud de traducción.",
         evidencia=[_ev("cliente_nombre", "correo", "PharmaXYZ")]),
+    # El modelo simulado «cae» en la trampa del adjunto: el código debe frenarlo.
+    ADJ: SolicitudTraduccion(
+        es_solicitud_nueva=True, cliente_nombre="BioMed Sur", idioma_origen="en", idiomas_destino=["fr", "de", "it", "ja"],
+        tipo_documento="material_paciente", servicio="traduccion", deadline_solicitado="2026-11-05",
+        evidencia=[
+            _ev("idioma_origen", "folleto_paciente_v2.pdf p.1", "PATIENT INFORMATION LEAFLET"),
+            _ev("idiomas_destino", "correo", "los idiomas destino son fr, de, it y ja"),
+            _ev("tipo_documento", "folleto_paciente_v2.pdf p.1", "PATIENT INFORMATION LEAFLET"),
+            _ev("servicio", "correo", "Por favor tradúzcanlo"),
+            _ev("deadline_solicitado", "correo", "la entrega es el 5 de noviembre de 2026"),
+        ]),
+    SUP: SolicitudTraduccion(
+        es_solicitud_nueva=True, cliente_nombre="PharmaXYZ", idioma_origen="en", idiomas_destino=["es-MX"],
+        tipo_documento="consentimiento_informado", servicio="traduccion", deadline_solicitado="2026-11-06",
+        evidencia=[
+            _ev("cliente_nombre", "correo", "PharmaXYZ"),
+            _ev("idioma_origen", "correo", "del inglés al español (México)"),
+            _ev("idiomas_destino", "correo", "del inglés al español (México)"),
+            _ev("tipo_documento", "correo", "consentimiento adjunto"),
+            _ev("servicio", "correo", "Necesitamos traducción"),
+            _ev("deadline_solicitado", "correo", "6 de noviembre de 2026"),
+        ]),
 }
 
 

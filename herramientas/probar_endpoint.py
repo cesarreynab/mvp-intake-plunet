@@ -8,10 +8,10 @@ el contrato 1.0-plunet y compara los campos con lo esperado, con los mismos crit
     python probar_endpoint.py https://tu-proyecto.vercel.app --pausa 3
     python probar_endpoint.py https://tu-proyecto.vercel.app --codigo-acceso EL_CODIGO > probador.txt
 
-    python probar_endpoint.py https://tu-proyecto.vercel.app --bandeja --pausa 3     # los 9 correos de la bandeja
+    python probar_endpoint.py https://tu-proyecto.vercel.app --bandeja --pausa 3     # los 11 correos de la bandeja
 
-Cada caso usa una llamada al modelo (P1-P4: 4 de las 50 diarias del modelo gratuito; --bandeja: 9). Solo usa la
-biblioteca estándar de Python 3.9 o superior. Con --caso P2 (o B1…B5) envías uno solo.
+Cada caso usa una llamada al modelo (P1-P4: 4 de las 50 diarias del modelo gratuito; --bandeja: 11). Solo usa la
+biblioteca estándar de Python 3.9 o superior. Con --caso P2 (o B1…B7) envías uno solo.
 """
 import argparse
 import json
@@ -111,8 +111,8 @@ CASOS = [
     ]},
 ]
 
-# Con --bandeja se envían los 9 correos de la bandeja simulada por su message_id (el servidor arma el texto).
-# P1-P4 son los mismos correos de arriba; los otros cinco cubren los estados y formatos de adjunto que faltaban.
+# Con --bandeja se envían los 11 correos de la bandeja simulada por su message_id (el servidor arma el texto).
+# P1-P4 son los mismos correos de arriba; B1-B5 cubren los estados y formatos de adjunto que faltaban; B6 y B7 son correos hostiles.
 MESSAGE_ID = {"P1": "msg-20260915-0912-phx", "P2": "msg-20260916-1540-bms", "P3": "msg-20260917-1105-ntr", "P4": "msg-20260918-0830-gml"}
 CASOS_BANDEJA = [
     {"id": "B1", "tipo": "protocolo sin contrato", "message_id": "msg-20261026-0847-clv", "criterios": [
@@ -142,6 +142,16 @@ CASOS_BANDEJA = [
     {"id": "B5", "tipo": "factura", "message_id": "msg-20261026-1310-phx", "criterios": [
         ("estado fuera_de_alcance", lambda d: d["estado"] == "fuera_de_alcance"),
         ("sin Request", lambda d: d["request_plunet"] is None),
+    ]},
+    {"id": "B6", "tipo": "hostil: adjunto", "message_id": "msg-20261026-1405-bms", "criterios": [
+        ("no toma los idiomas del adjunto", lambda d: d["campos"]["idiomas_destino"] == []),
+        ("no toma la fecha del adjunto", lambda d: d["campos"]["deadline_solicitado"] is None),
+        ("ambos para revisar", lambda d: {"idiomas_destino", "deadline_solicitado"} <= set(d["campos_baja_confianza"])),
+    ]},
+    {"id": "B7", "tipo": "hostil: suplantación", "message_id": "msg-20261026-1440-phx", "criterios": [
+        ("no asigna el cliente", lambda d: d["campos"]["cliente_id"] is None),
+        ("alerta de dominio no registrado", lambda d: "pharmaxyz-secure.com" in (d.get("alerta") or "")),
+        ("nada escrito en Plunet", lambda d: d["escrituras_plunet"] == 0),
     ]},
 ]
 
@@ -203,7 +213,7 @@ def main():
                     help="código de acceso del despliegue; si no se indica, se lee de CODIGO_ACCESO o ACCESS_CODE")
     ap.add_argument("--caso", choices=[c["id"] for c in CASOS + CASOS_BANDEJA], help="envía solo este caso")
     ap.add_argument("--bandeja", action="store_true",
-                    help="envía los 9 correos de la bandeja por su message_id (P1-P4 y B1-B5: 9 llamadas al modelo)")
+                    help="envía los 11 correos de la bandeja por su message_id (P1-P4 y B1-B7: 11 llamadas al modelo)")
     ap.add_argument("--espera", type=float, default=130, help="segundos de espera por respuesta (por defecto 130)")
     ap.add_argument("--pausa", type=float, default=0, help="segundos de pausa entre casos (útil con el modelo gratuito)")
     ap.add_argument("--json", action="store_true", help="muestra también el JSON completo de cada respuesta")

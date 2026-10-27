@@ -5,7 +5,7 @@ import openai
 import pytest
 
 import intake
-from casos import BMS, CLV, EXTRACCIONES, FAC, MDL, NFC, P1, P2, P3, P4, ExtractorSimulado
+from casos import ADJ, BMS, CLV, EXTRACCIONES, FAC, MDL, NFC, P1, P2, P3, P4, SUP, ExtractorSimulado
 from contrato import ErrorContrato
 from datos import SolicitudTraduccion
 
@@ -223,3 +223,18 @@ def test_si_el_primer_respaldo_falla_responde_el_segundo(monkeypatch):
                                                           for m in ("respaldo/uno", "respaldo/dos")})
     r = correr(P1)
     assert r["modelo"] == "respaldo/dos" and r["llamadas_modelo"] == 3 and r["estado"] == "pendiente_revision"
+
+
+def test_hostil_adjunto_de_la_bandeja_no_prellena_idiomas_ni_fecha(modelo_simulado):
+    r = correr(ADJ)
+    assert r["campos"]["cliente_id"] == "BMS-0032" and r["campos"]["servicio"] == "traduccion"
+    assert r["campos"]["idiomas_destino"] == [] and r["campos"]["deadline_solicitado"] is None
+    assert {"idiomas_destino", "deadline_solicitado"} <= set(r["campos_baja_confianza"])
+    assert "solo aparecen en un adjunto" in r["alerta"]
+
+
+def test_hostil_suplantacion_de_la_bandeja_no_asigna_cliente(modelo_simulado):
+    r = correr(SUP)
+    assert r["campos"]["cliente_id"] is None and "cliente_id" in r["campos_baja_confianza"]
+    assert "PHX-0148" in r["alerta"] and "pharmaxyz-secure.com" in r["alerta"]
+    assert r["escrituras_plunet"] == 0
