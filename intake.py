@@ -27,7 +27,7 @@ from langgraph.graph import END, START, StateGraph
 
 from contrato import ErrorContrato
 from estimacion import estimar, fecha, volumen_de_adjuntos, volumen_de_texto
-from datos import (CAMPOS_CLAVE, CLIENTES, CLIENTES_POR_DOMINIO, CONFIANZA_DOMINIO, CONFIANZA_RAZON_SOCIAL,
+from datos import (CAMPOS_CLAVE, CAMPOS_DEL_PEDIDO, CLIENTES, CLIENTES_POR_DOMINIO, CONFIANZA_DOMINIO, CONFIANZA_RAZON_SOCIAL,
                    DOMINIOS_PUBLICOS, IDIOMAS_ISO, MAPEO_PLUNET, MODEL_ID, SYSTEM_PROMPT, UMBRAL_CAMPO,
                    UMBRAL_GLOBAL, SolicitudTraduccion)
 
@@ -73,6 +73,7 @@ def _cabecera(entrada: str, nombre: str) -> Optional[str]:
     return m.group(1).strip() if m else None
 
 
+_ADJUNTO = re.compile(r"^---\s*Adjunto:.*$", re.MULTILINE)   # el cuerpo del correo termina en la primera marca
 _LOCALE = re.compile(r"^([a-z]{2})(?:[-_]([a-z]{2}))?$")
 
 
@@ -170,8 +171,16 @@ def validar(r: Estado) -> dict:
     # 1. Evidencia: solo cuentan las citas que existen literalmente en la entrada.
     propuestas = [e for e in (s.get("evidencia") or []) if isinstance(e, dict)]
     evidencia = [e for e in propuestas if e.get("fragmento") and _norm(e["fragmento"]) in texto_norm]
+    # 1b. Los datos del pedido (idiomas destino, fecha, servicio) los pide el cliente en el cuerpo del correo; un
+    #     adjunto es el documento a traducir. Una cita que solo está en un adjunto no los respalda: se comprueba dónde
+    #     aparece el texto, sin confiar en la «fuente» que declara el modelo (prueba de seguridad 6).
+    cuerpo_norm = _norm(_ADJUNTO.split(entrada, maxsplit=1)[0])
+    solo_en_adjunto = sorted({e["campo"] for e in evidencia
+                              if e["campo"] in CAMPOS_DEL_PEDIDO and _norm(e["fragmento"]) not in cuerpo_norm})
     conf: dict[str, float] = {}
     for e in evidencia:
+        if e["campo"] in CAMPOS_DEL_PEDIDO and _norm(e["fragmento"]) not in cuerpo_norm:
+            continue
         conf[e["campo"]] = max(conf.get(e["campo"], 0.0), float(e.get("confianza") or 0.0))
     campos: dict[str, Any] = {}
     baja: list[str] = []
@@ -208,10 +217,18 @@ def validar(r: Estado) -> dict:
     campos["contrato_id"] = contratos[0] if len(contratos) == 1 else None
     if campos["contrato_id"] is None:
         baja.append("contrato_id")
+    if solo_en_adjunto:
+        nombres = {"idiomas_destino": "idiomas destino", "deadline_solicitado": "fecha de entrega", "servicio": "servicio"}
+        varios = len(solo_en_adjunto) > 1
+        aviso = (f"{' y '.join(nombres[c] for c in solo_en_adjunto).capitalize()}: "
+                 f"{'solo aparecen' if varios else 'solo aparece'} en un adjunto, no en el correo del cliente. "
+                 f"{'No se prellenan' if varios else 'No se prellena'}; el PM debe confirmarlo con el cliente.")
+        alerta = f"{alerta} {aviso}".strip()
     score = round(sum(conf.get(c, 0.0) if campos[c] not in (None, []) else 0.0 for c in CAMPOS_CLAVE) / len(CAMPOS_CLAVE), 2)
     paso = {"tipo": "paso", "nombre": "validar",
             "detalle": f"citas literales {len(evidencia)} de {len(propuestas)} · cliente: {como_cliente} · "
-                       f"{len(baja)} {'campo' if len(baja) == 1 else 'campos'} para revisar"}
+                       + (f"solo en adjunto: {', '.join(solo_en_adjunto)} · " if solo_en_adjunto else "")
+                       + f"{len(baja)} {'campo' if len(baja) == 1 else 'campos'} para revisar"}
     return {"campos": campos, "confianza_por_campo": {k: round(v, 2) for k, v in conf.items()},
             "campos_baja_confianza": baja, "evidencia": evidencia, "score_global": score,
             "archivos": listar_adjuntos(entrada), "alerta": alerta, "pasos": r.get("pasos", []) + [paso]}

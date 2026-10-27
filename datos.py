@@ -98,6 +98,9 @@ UMBRAL_CAMPO = 0.75    # bajo este valor el campo queda null y va a campos_baja_
 UMBRAL_GLOBAL = 0.60   # bajo este valor no se prellena: cola_manual
 CONFIANZA_DOMINIO = 0.98          # cliente identificado por el dominio del remitente
 CONFIANZA_RAZON_SOCIAL = 0.70     # solo por razón social: bajo el umbral a propósito, lo confirma el PM
+# Los datos del pedido solo valen si la cita está en el cuerpo del correo, no en un adjunto (el adjunto es el documento
+# a traducir y puede traer texto que parezca una instrucción).
+CAMPOS_DEL_PEDIDO = {"idiomas_destino", "deadline_solicitado", "servicio"}
 CAMPOS_CLAVE = ["cliente_id", "idioma_origen", "idiomas_destino", "tipo_documento", "servicio", "deadline_solicitado"]
 IDIOMAS_ISO = {"en", "es", "pt", "fr", "de", "it", "nl", "pl", "ru", "zh", "ja", "ko", "ar", "tr", "sv", "da", "fi", "no",
                "cs", "hu", "ro", "el", "he", "uk"}

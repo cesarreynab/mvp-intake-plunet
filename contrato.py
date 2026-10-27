@@ -224,7 +224,7 @@ def normalizar_salida(crudo: Any, *, backend: str, ruta: str = "", modelo: str =
         "fecha_correo": crudo.get("fecha_correo") if isinstance(crudo.get("fecha_correo"), str) and _FECHA.match(crudo["fecha_correo"]) else None,
         "estado": estado,
         "razon": limpiar_texto(crudo.get("razon"), 300),
-        "alerta": limpiar_texto(crudo.get("alerta"), 300),
+        "alerta": limpiar_texto(crudo.get("alerta"), 500),
         "score_global": _numero(crudo.get("score_global")),
         "campos": _campos(crudo.get("campos")),
         "confianza_por_campo": _confianzas(crudo.get("confianza_por_campo")),
